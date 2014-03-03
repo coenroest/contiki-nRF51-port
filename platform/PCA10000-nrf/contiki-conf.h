@@ -1,15 +1,22 @@
 /*
- * rtimer-arch.h
+ * contiki-conf.h
  *
- *  Created on: 19-Feb-2014
+ *  Created on: 30-Jan-2014
  *      Author: prithvi
  */
 
-#ifndef RTIMER_ARCH_H_
-#define RTIMER_ARCH_H_
+#ifndef CONTIKI_CONF_H_
+#define CONTIKI_CONF_H_
 
+#include <stdint.h>
 #include "nrf.h"
-#include "clock-nrf.h"
+
+#define CCIF
+#define CLIF
+
+/* For the main clock. RTC1 is used in nrf51822*/
+#define CLOCK_CONF_SECOND 64
+typedef uint32_t clock_time_t;
 
 /* For the RTIMER clock. Timer1 is used in nrf51822*/
 #define TIMER_PRESCALER 	0
@@ -19,11 +26,11 @@
 #endif
 #define RTIMER_ARCH_SECOND (((HFCLK_FREQUENCY)/(1<<TIMER_PRESCALER))/TIMER_COMPARE_FREQ)
 #define RTIMER_CLOCK_LT(a,b) ((int32_t)((a)-(b)) < 0)
-
 typedef uint32_t rtimer_clock_t;
 
-void rtimer_arch_init(void);
-void rtimer_arch_schedule(rtimer_clock_t t);
-rtimer_clock_t rtimer_arch_now(void);
+/* Defined as 0 for UART0 and 1 for UART1 */
+//#define DEBUG_UART      0
 
-#endif /* RTIMER_ARCH_H_ */
+typedef uint32_t uip_stats_t;
+
+#endif /* CONTIKI_CONF_H_ */

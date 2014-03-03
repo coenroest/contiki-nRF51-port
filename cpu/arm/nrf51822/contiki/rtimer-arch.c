@@ -7,6 +7,7 @@
 
 #include "rtimer-arch.h"
 #include "clock-nrf.h"
+#include "sys/rtimer.h"
 
 static volatile rtimer_clock_t rtimer_count = 0, rtimer_next_schedule = 0;
 bool rtimer_scheduled = false;
@@ -62,10 +63,10 @@ TIMER1_IRQHandler(){
     if(rtimer_scheduled){
     	if(rtimer_count >= rtimer_next_schedule){
     		rtimer_scheduled = false;
-    	    //rtimer_run_next();
+    	    rtimer_run_next();
     	}
     }
-    if((rtimer_count % (RTIMER_ARCH_SECOND-340)) == 0){
-    	printf("RTIMER count:%d\n",(int) rtimer_count);
-    }
+    //if((rtimer_count % (RTIMER_ARCH_SECOND-340)) == 0){
+    //	printf("RTIMER count:%d\n",(int) rtimer_count);
+    //}
 }
