@@ -20,7 +20,7 @@ $(info $(CONTIKI_TARGET_SOURCEFILES))
 
 CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
 
-CLEAN += *.$(TARGET)
+CLEAN += *.$(TARGET) *.jlink
 
 ### Unless the example dictates otherwise, build with code size optimisations
 #ifndef SMALL

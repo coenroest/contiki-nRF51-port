@@ -15,14 +15,17 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "board.h"
+#include "dev/serial-line.h"
 
 void
 UART0_IRQHandler(void) 
 {
   
-//      nrf_gpio_pin_toggle(LED_RGB_BLUE);
-//      nrf_gpio_pin_toggle(LED_RGB_RED);
-    simple_uart_put(simple_uart_get());
+	NRF_UART0->EVENTS_RXDRDY = 0;
+
+	serial_line_input_byte((uint8_t) NRF_UART0->RXD);
+
+//    simple_uart_put(simple_uart_get());
 } uint8_t simple_uart_get(void) 
 {
   while(NRF_UART0->EVENTS_RXDRDY != 1)

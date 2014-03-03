@@ -25,6 +25,8 @@
 *.c64
 *.cc2538dk
 *.report
+*.PCA10000-nrf
+*.jlink
 summary
 *.summary
 *.faillog
