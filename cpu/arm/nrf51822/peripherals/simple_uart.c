@@ -15,6 +15,7 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "board.h"
+#include "contiki-conf.h"
 #include "dev/serial-line.h"
 
 void
@@ -92,7 +93,13 @@ simple_uart_putstring(const uint8_t * str)
 	ch = str[i++];
 	}
 }
- void
+
+void
+simple_uart_init(){
+	  simple_uart_config(RTS_PIN_NUMBER, TX_PIN_NUMBER, CTS_PIN_NUMBER,
+			  RX_PIN_NUMBER, UART_BAUDRATE, 12, HWFC);
+	  serial_line_init();
+} void
 simple_uart_config(uint8_t rts_pin_number, uint8_t txd_pin_number,
                    uint8_t cts_pin_number, uint8_t rxd_pin_number,
                    uint32_t baud_rate, uint8_t irq_priority, bool hwfc) 

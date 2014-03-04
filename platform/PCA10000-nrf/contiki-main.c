@@ -1,18 +1,22 @@
-/*
- * main.c
+/**
+ * \addtogroup platform
+ * @{
+ *
+ * \defgroup PCA10000 PCA10000: The USB dongle platform for the nrf51822 MCU
+ *
+ * PCA10000 is a USB dongle as a part of the nrf51822 MCU's evaluation and development kit.
+ * nrf51822 is a ARM Cortex M0 based MCU with BLE compatible radio. It has an inbuilt JLink-Lite
+ * Cortex-M debugger/programmer.
+ * @{
+ * \file contiki-main.c
  *
  *  Created on: 30-Feb-2014
- *      Author: prithvi
+ *  \author: PrithviRaj Narendra
  */
 
 #include "contiki.h"
 #include "board.h"
-#include "dev/serial-line.h"
-
-
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
+#include "simple_uart.h"
 
 /*---------------------------------------------------------------------------*/
 /**
@@ -21,18 +25,19 @@
 int
 main(void)
 {
+/*
+ * Initialize the basic peripherals required for Contiki
+ */
   clock_init();
   rtimer_init();
   leds_init();
-  simple_uart_config(RTS_PIN_NUMBER, TX_PIN_NUMBER, CTS_PIN_NUMBER,
-		  RX_PIN_NUMBER, UART_BAUDRATE_BAUDRATE_Baud38400, 12, HWFC);
+  simple_uart_init();
 
   process_init();
 
-  serial_line_init();
-
+  /* Testing of the basic peripherals */
   leds_blink();
-  printf(" Net: ");
+  printf("Testing\r");
 
   process_start(&etimer_process, NULL);
   ctimer_init();

@@ -58,7 +58,10 @@ Maximum string length is 254 characters including null character in the end.
 */ 
 void simple_uart_putstring(const uint8_t * str);
 
- 
+/**  @brief Function to initialize the UART peripheral and also the serial line process
+ *   		of Contiki
+ */void simple_uart_init();
+
 /** @brief Function for configuring UART to use 38400 baud rate.
 @param rts_pin_number Chip pin number to be used for UART RTS
 @param txd_pin_number Chip pin number to be used for UART TXD
