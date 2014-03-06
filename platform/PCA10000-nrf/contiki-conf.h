@@ -5,8 +5,7 @@
  * \file
  * Configuration for the PCA10000 platform
  *
- *  \author
- *  PrithviRaj Narendra
+ *  \author prithvi
  */
 
 #ifndef CONTIKI_CONF_H_
@@ -50,6 +49,10 @@ typedef uint32_t rtimer_clock_t;
 
 /* Specify the UART baud rate */
 #define UART_BAUDRATE UART_BAUDRATE_BAUDRATE_Baud38400
+
+/* Specify the source of the Low freq clock for the platform */
+#define SRC_LFCLK CLOCK_LFCLKSRC_SRC_Xtal
+
 
 /** @} */
 /*---------------------------------------------------------------------------*/

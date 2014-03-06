@@ -1,8 +1,8 @@
-/*
- * clock.c
+/**
+ * \file clock-nrf.c
  *
  *  Created on: 30-Jan-2014
- *      Author: prithvi
+ * \author prithvi
  */
 
 #include "clock-nrf.h"
@@ -19,7 +19,7 @@ static volatile unsigned int second_countdown = CLOCK_SECOND;
 static volatile uint32_t ovr = 0, offset = 0;
 #endif
 
-/** @brief Function starting the LFCLK oscillator. Use the #define in the clock.h file to configure the source.
+/** \brief Function starting the LFCLK oscillator. Use the #define in the clock.h file to configure the source.
  */
 void
 lfclk_init(void)
@@ -33,7 +33,7 @@ lfclk_init(void)
   NRF_CLOCK->EVENTS_LFCLKSTARTED = 0;
 }
 
-/** @brief Function stopping the LFCLK oscillator.
+/** \brief Function stopping the LFCLK oscillator.
  */
 void
 lfclk_deinit(void)
@@ -41,7 +41,7 @@ lfclk_deinit(void)
   NRF_CLOCK->TASKS_LFCLKSTOP = 1;
 }
 
-/** @brief Function starting the HFCLK XTAL 16 MHz crystal oscillator.
+/** \brief Function starting the HFCLK XTAL 16 MHz crystal oscillator.
  */
 void
 hfclk_xtal_init(void)
@@ -56,7 +56,7 @@ hfclk_xtal_init(void)
   }
 }
 
-/** @brief Function stopping the HFCLK XTAL 16 MHz crystal oscillator. MCU will run on 16 MHz RC oscillator
+/** \brief Function stopping the HFCLK XTAL 16 MHz crystal oscillator. MCU will run on 16 MHz RC oscillator
  */
 void
 hfclk_xtal_deinit(void)
@@ -64,7 +64,7 @@ hfclk_xtal_deinit(void)
   NRF_CLOCK->TASKS_HFCLKSTOP = 1;
 }
 
-/** @brief Function for configuring the RTC increments at a freq of to (CLOCK_SECOND) Hz and COMPARE0 to 1 sec.
+/** \brief Function for configuring the RTC increments at a freq of to (CLOCK_SECOND) Hz and COMPARE0 to 1 sec.
  */
 void
 rtc_init(void)
@@ -87,7 +87,7 @@ rtc_init(void)
 
 }
 
-/** @brief Function to return the current_clock
+/** \brief Function to return the current_clock
  */
 clock_time_t
 nrf_clock_time(void)
@@ -99,7 +99,7 @@ nrf_clock_time(void)
 #endif
 }
 
-/** @brief Function to return the current_seconds
+/** \brief Function to return the current_seconds
  */
 unsigned long
 nrf_clock_seconds(void)
@@ -110,7 +110,7 @@ nrf_clock_seconds(void)
   return current_seconds;
 }
 
-/** @brief Function to set the current_seconds
+/** \brief Function to set the current_seconds
  */
 void
 nrf_clock_set_seconds(unsigned long sec)
@@ -123,11 +123,11 @@ nrf_clock_set_seconds(unsigned long sec)
 }
 
 #ifndef TICK
-/*@brief Function which sends the expiration time
+/*\brief Function which sends the expiration time
  *
  */
 void
-update_expiration_time(clock_time_t expiration_time)
+etimer_update_expiration_time(clock_time_t expiration_time)
 {
   // Enable COMPARE1 event and COMPARE1 interrupt:
   NRF_RTC1->EVTENSET      = RTC_EVTENSET_COMPARE1_Msk;
@@ -138,7 +138,7 @@ update_expiration_time(clock_time_t expiration_time)
 }
 #endif
 
-/** @brief: Function for handling the RTC1 interrupts.
+/** \brief: Function for handling the RTC1 interrupts.
  * Triggered on TICK or OVERFLOW (#ifdef TICK)
  */
 void

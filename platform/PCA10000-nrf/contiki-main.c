@@ -11,7 +11,7 @@
  * \file contiki-main.c
  *
  *  Created on: 30-Feb-2014
- *  \author: PrithviRaj Narendra
+ *  \author prithvi
  */
 
 #include "contiki.h"

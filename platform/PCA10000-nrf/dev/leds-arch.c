@@ -21,8 +21,7 @@
  * \file
  * LED driver implementation for the RGB LED of PCA10000 platform
  *
- * \author
- * PrithviRaj Narendra
+ * \author prithvi
  */
 
 #include "leds.h"
@@ -31,6 +30,7 @@
 
 /*---------------------------------------------------------------------------*/
 /**@brief Function to initialize the LEDS in the PCA10000 board
+ * 		  Also switches off all of them
  */
 void
 leds_arch_init(void){
@@ -48,10 +48,10 @@ leds_arch_init(void){
  */
 uint8_t
 leds_arch_get(void){
-	uint8_t temp = 	(nrf_gpio_pin_read(LEDS_CONF_RED)>>2)|
-							(nrf_gpio_pin_read(LEDS_CONF_BLUE)>>1)|
-							(nrf_gpio_pin_read(LEDS_CONF_GREEN));
-	return ((~temp)&0x07);
+	uint8_t temp = 	(nrf_gpio_pin_read(LEDS_CONF_RED)*LEDS_RED)|
+							(nrf_gpio_pin_read(LEDS_CONF_BLUE)*LEDS_BLUE)|
+							(nrf_gpio_pin_read(LEDS_CONF_GREEN)*LEDS_GREEN);
+	return ((~temp)&(LEDS_RED|LEDS_BLUE|LEDS_GREEN));
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -63,9 +63,9 @@ void
 leds_arch_set(uint8_t leds){
 	/* Invert the input since the LEDs are active low */
 	leds = ~leds;
-	nrf_gpio_pin_write(LEDS_CONF_GREEN,(leds)&0x01);
-	nrf_gpio_pin_write(LEDS_CONF_BLUE,(leds)&0x02);
-	nrf_gpio_pin_write(LEDS_CONF_RED,(leds)&0x04);
+	nrf_gpio_pin_write(LEDS_CONF_GREEN,(leds & LEDS_GREEN));
+	nrf_gpio_pin_write(LEDS_CONF_BLUE,(leds & LEDS_BLUE));
+	nrf_gpio_pin_write(LEDS_CONF_RED,(leds & LEDS_RED));
 }
 
 /**

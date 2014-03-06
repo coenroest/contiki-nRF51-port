@@ -1,8 +1,8 @@
-/*
- * clock-nrf.h
+/**
+ * \file clock-nrf.h
  *
  *  Created on: 30-Jan-2014
- *      Author: prithvi
+ * \author prithvi
  */
 
 #ifndef CLOCK_NRF_H_
@@ -14,8 +14,6 @@
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
 #include "simple_uart.h"
-
-#define SRC_LFCLK CLOCK_LFCLKSRC_SRC_Xtal
 
 #define HFCLK_FREQUENCY		  (16000000UL)
 #define LFCLK_FREQUENCY           (32768UL)                               /**< LFCLK frequency in Hertz, constant. */
@@ -31,6 +29,6 @@ void hfclk_xtal_deinit(void);
 clock_time_t nrf_clock_time(void);
 unsigned long nrf_clock_seconds(void);
 void nrf_clock_set_seconds(uint32_t sec);
-void update_expiration_time(clock_time_t expiration_time);
+void etiemr_update_expiration_time(clock_time_t expiration_time);
 
 #endif /* CLOCK_NRF_H_ */

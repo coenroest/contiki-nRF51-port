@@ -9,6 +9,14 @@
  * the file.
  *
  */  
+
+/**
+*
+* \addtogroup nrf51822-simple-uart
+* @{
+* \brief Simple UART driver implementation
+* \file simple_uart.c
+*/
   
 #include "nrf.h"
 #include "simple_uart.h"
@@ -141,3 +149,6 @@ simple_uart_config(uint8_t rts_pin_number, uint8_t txd_pin_number,
 #endif  /*  */
 }
 
+/**
+ * @}
+ */
