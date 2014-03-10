@@ -12,13 +12,13 @@
  * \defgroup PCA10000-leds PCA10000's LED driver
  *
  * LED driver implementation for the RGB LED of PCA10000 platform.
- * Since the RGB LED is in a SMD package a combination of LEDS can
+ * Since the RGB LED is in a SMD package, a combination of LEDS can
  * create a different color. For example switching on green and blue
  * will produce cyan color.
  *
  * @{
  *
- * \file
+ * \file led-arch.c
  * LED driver implementation for the RGB LED of PCA10000 platform
  *
  * \author prithvi
