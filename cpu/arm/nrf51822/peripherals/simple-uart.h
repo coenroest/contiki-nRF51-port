@@ -26,8 +26,8 @@
 * \defgroup nrf51822-simple-uart Simple UART driver for nrf51822
 * This module contains the UART driver for nrf51822
 * @{
-* \brief Simple UART driver declarations are in simple_uart.h
-* \file simple_uart.h
+* \brief Simple UART driver declarations are in simple-uart.h
+* \file simple-uart.h
 */ 
   
 /** \brief Function for reading a character from UART.

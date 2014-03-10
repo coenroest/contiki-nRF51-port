@@ -14,7 +14,7 @@
 
 #include "clock-nrf.h"
 #include "clock.h"
-#include "nrf_delay.h"
+#include "nrf-delay.h"
 
 /**
  * \brief Initialize the clock library.

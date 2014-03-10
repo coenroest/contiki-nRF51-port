@@ -16,7 +16,7 @@
 
 #include "contiki.h"
 #include "board.h"
-#include "simple_uart.h"
+#include "simple-uart.h"
 
 /*---------------------------------------------------------------------------*/
 /**

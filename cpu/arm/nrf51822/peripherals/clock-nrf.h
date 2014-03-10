@@ -11,9 +11,9 @@
 #include "nrf.h"
 #include "clock.h"
 #include "leds.h"
-#include "nrf_delay.h"
-#include "nrf_gpio.h"
-#include "simple_uart.h"
+#include "nrf-delay.h"
+#include "nrf-gpio.h"
+#include "simple-uart.h"
 
 #define HFCLK_FREQUENCY		  (16000000UL)
 #define LFCLK_FREQUENCY           (32768UL)                               /**< LFCLK frequency in Hertz, constant. */

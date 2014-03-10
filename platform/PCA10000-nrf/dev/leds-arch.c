@@ -25,7 +25,7 @@
  */
 
 #include "leds.h"
-#include "nrf_gpio.h"
+#include "nrf-gpio.h"
 #include "board.h"
 
 /*---------------------------------------------------------------------------*/

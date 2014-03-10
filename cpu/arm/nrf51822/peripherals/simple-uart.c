@@ -14,14 +14,14 @@
 *
 * \addtogroup nrf51822-simple-uart
 * @{
-* \brief Simple UART driver implementation in contained in simple_uart.c
-* \file simple_uart.c
+* \brief Simple UART driver implementation in contained in simple-uart.c
+* \file simple-uart.c
 */
   
 #include "nrf.h"
-#include "simple_uart.h"
-#include "nrf_delay.h"
-#include "nrf_gpio.h"
+#include "simple-uart.h"
+#include "nrf-delay.h"
+#include "nrf-gpio.h"
 #include "board.h"
 #include "contiki-conf.h"
 #include "dev/serial-line.h"
@@ -60,7 +60,7 @@ simple_uart_get_with_timeout(int32_t timeout_ms, uint8_t * rx_data)
 }
 /*---------------------------------------------------------------------------*/
 void
-simple_uart_put(uint8_t cr) 
+simple_uart_put(uint8_t cr)
 {
 	NRF_UART0->TXD = (uint8_t) cr;
 	while(NRF_UART0->EVENTS_TXDRDY != 1){
@@ -84,7 +84,7 @@ _write(int fd, char * str, int len){
 	return len;
 }/*---------------------------------------------------------------------------*/
  void
-simple_uart_putstring(const uint8_t * str) 
+simple_uart_putstring(const uint8_t * str)
 {	uint_fast8_t i = 0;	uint8_t ch = str[i++];	while(ch != '\0'){		simple_uart_put(ch);		ch = str[i++];	}}
 /*---------------------------------------------------------------------------*/
 
@@ -95,7 +95,7 @@ simple_uart_init(){
 	  serial_line_init();
 }/*---------------------------------------------------------------------------*/
  void
-simple_uart_config(uint8_t rts_pin_number, uint8_t txd_pin_number,
+simple_uart_config(uint8_t rts_pin_number,uint8_t txd_pin_number,
                    uint8_t cts_pin_number, uint8_t rxd_pin_number,
                    uint32_t baud_rate, uint8_t irq_priority, bool hwfc) 
 {

@@ -90,9 +90,9 @@ CONTIKI_CPU_DIRS = . nrf gcc contiki link peripherals
 ### CPU-dependent source files
 #CONTIKI_CPU_SOURCEFILES = $(shell find . -name *.c | awk -F/ '{print $$NF}')
 CONTIKI_CPU_SOURCEFILES = system_nrf51.c clock.c rtimer-arch.c 
-CONTIKI_CPU_SOURCEFILES += clock-nrf.c simple_uart.c nrf_delay.c
+CONTIKI_CPU_SOURCEFILES += clock-nrf.c simple-uart.c nrf-delay.c
 #ASSEMBLY_SRC = gcc_startup_$(DEVICESERIES).S
-CONTIKI_CPU_SOURCEFILES += gcc_startup_$(DEVICESERIES).S
+CONTIKI_CPU_SOURCEFILES += gcc-startup-$(DEVICESERIES).S
 CONTIKI_SOURCEFILES += $(CONTIKI_CPU_SOURCEFILES)
 
 #Create binary files 

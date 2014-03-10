@@ -13,7 +13,7 @@
 #include <stdio.h> 
 #include "compiler_abstraction.h"
 #include "nrf.h"
-#include "nrf_delay.h"
+#include "nrf-delay.h"
   
 /*lint --e{438} "Variable not used" */ 
   void
