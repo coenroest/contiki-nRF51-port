@@ -1,7 +1,7 @@
 /** \addtogroup PCA10000
  * @{
  *
- * \file board.h
+ * \file
  * Header file with definitions related to the pins of LED
  * and serial port connections in the PCA10000 platform
  *  \author prithvi

@@ -18,7 +18,7 @@
  *
  * @{
  *
- * \file led-arch.c
+ * \file
  * LED driver implementation for the RGB LED of PCA10000 platform
  *
  * \author prithvi
@@ -69,6 +69,6 @@ leds_arch_set(uint8_t leds){
 }
 
 /**
- * }@
- * }@
+ * @}
+ * @}
  */

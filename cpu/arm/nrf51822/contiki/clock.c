@@ -2,22 +2,24 @@
  * \addtogroup nrf51822
  * @{
  *
- * \defgroup nrf51-clock nrf51822's Contiki Clock
- * This module contains the implementation of the clock library of Contiki for nrf51822
+ * \defgroup nrf51-contiki-clock nrf51822's Contiki Clock
+ * This module contains the implementation of the clock library
+ * of Contiki for nrf51822. This module uses the \ref nrf51-clock
+ * module for its implementation.
  * @{
  *
- * \file clock.c
+ * \file
  *
  *  Created on: 30-Jan-2014
  *  \author prithvi
  */
 
 #include "clock-nrf.h"
-#include "clock.h"
+#include "sys/clock.h"
 #include "nrf-delay.h"
 
 /**
- * \brief Initialize the clock library.
+ * \brief nrf51822 specific the Contiki clock initialization with RTC1.
  *
  * This function initializes the clock library and should be called
  * from the main() function of the system. nrf51822's high frequency
@@ -81,14 +83,17 @@ clock_wait(clock_time_t t)
   if(t) {
     clock_time_t end_t = t + nrf_clock_time();
 
-    while(nrf_clock_time() != end_t) {
+    while(nrf_clock_time() < end_t) {
     }
   }
 }
 
 /**
  * \brief Delay a given number of microseconds.
- * \param dt   How many milliseconds to delay.
+ * 		  This implementation uses NOP statements of CPU to while
+ * 		  alway the required amount of time. So, it is not power
+ * 		  efficient and accurate.
+ * \param dt How many milliseconds to delay.
  *
  * \note Interrupts could increase the delay by a variable amount.
  */
@@ -100,6 +105,9 @@ clock_delay(unsigned int dt)
 
 /**
  * \brief Delay a given number of microseconds.
+ *		  This implementation uses NOP statements of CPU to while
+ * 		  alway the required amount of time. So, it is not power
+ * 		  efficient and accurate.
  * \param dt   How many microseconds to delay.
  *
  * \note Interrupts could increase the delay by a variable amount.
@@ -109,6 +117,21 @@ clock_delay_usec(uint16_t dt)
 {
   nrf_delay_us(dt);
 }
+
+#if TICKLESS == TRUE
+/** \brief Function initializes code to call etimer poll based on expiration time received
+ *			The counter compare interrupt is initialized so that the interrupt occurs when
+ *			the expiration occurs and etimer poll is called from the ISR.
+ * \param expiration_time The value of \ref current_clock at which etimer expiration occurs
+ * \warning Since the RTC is a 24 bit counter, the expiration time must be less that 2^24
+ * 			even though the current_clock is 32 bit variable.
+ */
+void
+clock_update_expiration_time(clock_time_t expiration_time)
+{
+  nrf_clock_update_expiration_time(expiration_time);
+}
+#endif
 
 /**
  * @}

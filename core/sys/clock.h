@@ -131,6 +131,15 @@ void clock_wait(clock_time_t t);
  */
 void clock_delay_usec(uint16_t dt);
 
+#if TICKLESS == TRUE
+/**
+ * Sends the clock time when the next etimer poll needs to happen so that the platform can call it.
+ * \param expiration_time The time at which the etimer expires
+ */
+void
+clock_update_expiration_time(clock_time_t expiration_time);
+#endif
+
 /**
  * Deprecated platform-specific routines.
  *

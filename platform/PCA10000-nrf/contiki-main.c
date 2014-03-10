@@ -8,7 +8,7 @@
  * nrf51822 is a ARM Cortex M0 based MCU with BLE compatible radio. It has an inbuilt JLink-Lite
  * Cortex-M debugger/programmer.
  * @{
- * \file contiki-main.c
+ * \file
  *
  *  Created on: 30-Feb-2014
  *  \author prithvi

@@ -2,7 +2,7 @@
  * \addtogroup PCA10000
  * @{
  *
- * \file contiki-conf.h
+ * \file
  * Platform specific configurations for PCA10000
  * PCA10000's platform specific definitions required for Contiki
  * The parameters defined are Clock and RTIMER's frequency, UART baud rate,
@@ -57,6 +57,12 @@ typedef uint32_t rtimer_clock_t;
 #endif
 /** @} */
 
+/** HF Clock frequency in Hertz, constant.
+ *  When RC is used it is always 16 MHz. When a crystal is
+ *  used it is either 16 MHz or 32 MHz based on the crystal.
+ */
+#define HFCLK_FREQUENCY		  (16000000UL)
+
 /** 62.5 kHz clock based on TIMER1 for the RTIMER */
 #define RTIMER_ARCH_SECOND 		(((HFCLK_FREQUENCY)/(1<<TIMER_PRESCALER))/TIMER_COMPARE_FREQ)
 
@@ -66,6 +72,8 @@ typedef uint32_t rtimer_clock_t;
 /** Specify the source of the Low freq clock for the platform */
 #define SRC_LFCLK CLOCK_LFCLKSRC_SRC_Xtal
 
+/** Specify if TICKLESS implementation is required*/
+#define TICKLESS TRUE
 
 /*---------------------------------------------------------------------------*/
 
