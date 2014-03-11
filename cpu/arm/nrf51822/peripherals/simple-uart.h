@@ -23,7 +23,7 @@
 *
 * \addtogroup nrf51822
 * @{
-* \defgroup nrf51822-simple-uart Simple UART driver for nrf51822
+* \defgroup nrf51822-simple-uart Simple UART driver for nrf51822 SoC
 * This module contains the UART driver for nrf51822
 * @{
 * \brief Simple UART driver declarations are in simple-uart.h

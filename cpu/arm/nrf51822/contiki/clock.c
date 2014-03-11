@@ -2,7 +2,7 @@
  * \addtogroup nrf51822
  * @{
  *
- * \defgroup nrf51-contiki-clock nrf51822's Contiki Clock
+ * \defgroup nrf51-contiki-clock Contiki Clock implementation for nrf51822 SoC
  * This module contains the implementation of the clock library
  * of Contiki for nrf51822. This module uses the \ref nrf51-clock
  * module for its implementation.

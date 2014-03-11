@@ -17,6 +17,7 @@
 #include "contiki.h"
 #include "board.h"
 #include "simple-uart.h"
+#include "dev/leds.h"
 
 /*---------------------------------------------------------------------------*/
 /**

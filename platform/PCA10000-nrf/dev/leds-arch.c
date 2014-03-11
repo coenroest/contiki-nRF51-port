@@ -29,8 +29,8 @@
 #include "board.h"
 
 /*---------------------------------------------------------------------------*/
-/**@brief Function to initialize the LEDS in the PCA10000 board
- * 		  Also switches off all of them
+/**@brief Function to initialize the LEDS in the PCA10000 board,
+ * 		  also switch off all of them
  */
 void
 leds_arch_init(void){

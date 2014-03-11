@@ -1,7 +1,7 @@
 /**
  * \addtogroup nrf51822
  * @{
- * \defgroup nrf51-clock Clock implementation of nrf51822 SoC
+ * \defgroup nrf51-clock Clock implementation for nrf51822 SoC
  * 			This module include the initialization of the 16 MHz high
  * 			frequency clock, 32.768 kHz LF clock and RTC1. Also all the
  * 			implementations of functions required by \ref nrf51-contiki-clock
@@ -35,7 +35,7 @@
 /** Unsigned int to store the number of seconds passed, required by Contiki */
 static volatile uint32_t current_seconds = 0;
 
-#if TICKLESS == TRUE
+#if TICKLESS == true
 /** Unsigned int to store the number of times the RTC has overflowed to calculate \ref current_seconds */
 static volatile uint32_t seconds_ovr = 0;
 /** Variable to store the seconds offset if \ref clock_set_seconds is called */

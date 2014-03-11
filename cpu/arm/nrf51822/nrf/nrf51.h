@@ -26,11 +26,12 @@
 
 
 
-/* @addtogroup Nordic Semiconductor
+/** @addtogroup nrf51822
   * @{
   */
 
-/* @addtogroup nRF51
+/** @defgroup nRF51 Hardware abstraction definition for nrf51822 SoC
+ * 	This module contains all the peripheral and processor definitions used by nrf51822
   * @{
   */
 
@@ -1234,8 +1235,8 @@ typedef struct {                                    /*!< GPIO Structure         
 
 
 /** @} */ /* End of group Device_Peripheral_Registers */
-/* @} */ /* End of group nRF51 */
-/* @} */ /* End of group Nordic Semiconductor */
+/** @} */ /* End of group nRF51 */
+/** @} */ /* End of group Nordic Semiconductor */
 
 #ifdef __cplusplus
 }

@@ -71,7 +71,7 @@ rtc_init(void)
   /* Set prescaler so that TICK freq is CLOCK_SECOND */
   NRF_RTC1->PRESCALER = COUNTER_PRESCALER;
 
-#if TICKLESS == TRUE
+#if TICKLESS == true
   /* Enable overflow event and overflow interrupt */
   NRF_RTC1->EVTENSET      = RTC_EVTENSET_OVRFLW_Msk;;
   NRF_RTC1->INTENSET      = RTC_INTENSET_OVRFLW_Msk;
@@ -94,7 +94,7 @@ rtc_init(void)
 clock_time_t
 nrf_clock_time(void)
 {
-#if TICKLESS == TRUE
+#if TICKLESS == true
 	return NRF_RTC1->COUNTER;
 #else
     return current_clock;
@@ -109,7 +109,7 @@ nrf_clock_time(void)
 unsigned long
 nrf_clock_seconds(void)
 {
-#if TICKLESS == TRUE
+#if TICKLESS == true
 	current_seconds = seconds_offset + ((seconds_ovr*16777216 + NRF_RTC1->COUNTER) / CLOCK_SECOND);
 #endif
   return current_seconds;
@@ -122,14 +122,14 @@ nrf_clock_seconds(void)
 void
 nrf_clock_set_seconds(unsigned long sec)
 {
-#if TICKLESS == TRUE
+#if TICKLESS == true
 	seconds_offset = sec - ((seconds_ovr*16777216 + NRF_RTC1->COUNTER) / CLOCK_SECOND);
 #else
   	current_seconds = sec;
 #endif
 }
 
-#if TICKLESS == TRUE
+#if TICKLESS == true
 /** \brief Function initializes code to call etimer poll based on expiration time received
  *			The counter compare interrupt is initialized so that the interrupt occurs when
  *			the expiration occurs and etimer poll is called from the ISR.
@@ -166,7 +166,7 @@ nrf_clock_update_expiration_time(clock_time_t expiration_time)
 void
 RTC1_IRQHandler()
 {
-#if TICKLESS == TRUE
+#if TICKLESS == true
 
   if(NRF_RTC1->EVENTS_OVRFLW == 1){
 	  NRF_RTC1->EVENTS_OVRFLW = 0;
