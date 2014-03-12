@@ -9,8 +9,7 @@
  * @{
  *
  * \file
- *
- *  Created on: 30-Jan-2014
+ * File containing the functions which call the nrf51822's clock implementation of Contiki
  *  \author prithvi
  */
 
@@ -122,7 +121,7 @@ clock_delay_usec(uint16_t dt)
 /** \brief Function initializes code to call etimer poll based on expiration time received
  *			The counter compare interrupt is initialized so that the interrupt occurs when
  *			the expiration occurs and etimer poll is called from the ISR.
- * \param expiration_time The value of \ref current_clock at which etimer expiration occurs
+ * \param expiration_time The value of current_clock at which etimer expiration occurs
  * \warning Since the RTC is a 24 bit counter, the expiration time must be less that 2^24
  * 			even though the current_clock is 32 bit variable.
  */

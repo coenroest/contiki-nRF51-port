@@ -14,8 +14,8 @@
 *
 * \addtogroup nrf51822-simple-uart
 * @{
-* \brief Simple UART driver implementation in contained in simple-uart.c
-* \file simple-uart.c
+* \file
+* Simple UART driver implementation for nrf51822
 */
   
 #include "nrf.h"

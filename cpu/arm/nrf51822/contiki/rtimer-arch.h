@@ -7,8 +7,7 @@
  *
  * @{
  * \file
- *
- *  Created on: 19-Feb-2014
+ * nrf51822 architecture specific declarations for Contiki's Rtimer
  * \author prithvi
  */
 

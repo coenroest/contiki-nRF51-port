@@ -2,8 +2,7 @@
  * \addtogroup nrf51-contiki-rtimer
  * @{
  * \file
- *
- *  Created on: 19-Feb-2014
+ * nrf51822 architecture specific implementation for Contiki's Rtimer
  *  \author prithvi
  */
 

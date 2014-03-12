@@ -9,8 +9,7 @@
  * Cortex-M debugger/programmer.
  * @{
  * \file
- *
- *  Created on: 30-Feb-2014
+ * Main file where the code execution starts for all examples based on PCA10000 platform
  *  \author prithvi
  */
 

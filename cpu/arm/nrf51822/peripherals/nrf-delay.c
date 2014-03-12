@@ -9,7 +9,10 @@
  * the file.
  *
  */  
-  
+/** \file
+ *  Create approximate millisecond(s) delay using by calling CPU intensive microseconds delays in nrf-delay.h
+ *
+ */
 #include <stdio.h> 
 #include "compiler_abstraction.h"
 #include "nrf.h"

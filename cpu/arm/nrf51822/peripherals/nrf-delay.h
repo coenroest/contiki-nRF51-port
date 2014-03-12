@@ -1,3 +1,8 @@
+/**
+ * \file
+ *  Create approximate microsecond(s) delay by CPU executing NOP statements
+ */
+
 #ifndef _NRF_DELAY_H
 #define _NRF_DELAY_H
 

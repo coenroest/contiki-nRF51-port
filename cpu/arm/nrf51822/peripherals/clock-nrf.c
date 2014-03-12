@@ -4,8 +4,7 @@
  * @{
  *
  * \file
- *
- *  Created on: 30-Jan-2014
+ * nrf51822 architecture specific implementation for Contiki's Clock
  * \author prithvi
  */
 
@@ -61,7 +60,7 @@ hfclk_xtal_deinit(void)
 }
 
 /** \brief Function for initializing the RTC1 for Contiki clock.
- * Configures the RTC to increments at a freq of \ref CLOCK_SECOND Hz
+ * Configures the RTC to increments at a freq of \ref CLOCK_CONF_SECOND Hz
  * and initializes the overflow interrupt if \ref TICKLESS is TRUE,
  * else initializes the counter tick interrupt
  */
