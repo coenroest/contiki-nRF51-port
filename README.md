@@ -1,7 +1,9 @@
+nrf51822's port to Contiki
+==========================
+This repository contains nrf51822's port to Contiki. Right now nothing related to the radio is added. The Doxygen documentation of the port is available [here](http://rumblingsofearthlord.com/nrf51Contiki/). For more information visit the blog [rumblingsOfEarthLord](http://rumblingsofearthlord.com/blog/).
+
 The Contiki Operating System
 ============================
-
-[![Build Status](https://secure.travis-ci.org/contiki-os/contiki.png)](http://travis-ci.org/contiki-os/contiki)
 
 Contiki is an open source operating system that runs on tiny low-power
 microcontrollers and makes it possible to develop applications that
