@@ -34,17 +34,18 @@
 /** Unsigned int to store the number of seconds passed, required by Contiki */
 static volatile uint32_t current_seconds = 0;
 
-#if TICKLESS == true
-/** Unsigned int to store the number of times the RTC has overflowed to calculate \ref current_seconds */
+/** Unsigned int to store the number of times the RTC has overflowed to calculate \ref current_seconds.
+ * 	Used with TICKLESS implementation */
 static volatile uint32_t seconds_ovr = 0;
-/** Variable to store the seconds offset if \ref clock_set_seconds is called */
+/** Variable to store the seconds offset if \ref clock_set_seconds is called.
+ * 	Used with TICKLESS implementation */
 static volatile uint32_t seconds_offset = 0;
-#else
-/** Variable to store the number of TICK of the clock */
+/** Variable to store the number of TICK of the clock.
+ * 	Used without TICKLESS implementation */
 static volatile clock_time_t current_clock = 0;
-/** Variable to store the number of ticks remaining to increment \ref current_seconds */
+/** Variable to store the number of ticks remaining to increment \ref current_seconds.
+ * 	Used without TICKLESS implementation */
 static volatile unsigned int second_countdown = CLOCK_SECOND;
-#endif
 
 void rtc_init(void);
 void lfclk_init(void);

@@ -117,7 +117,6 @@ clock_delay_usec(uint16_t dt)
   nrf_delay_us(dt);
 }
 
-#if TICKLESS == TRUE
 /** \brief Function initializes code to call etimer poll based on expiration time received
  *			The counter compare interrupt is initialized so that the interrupt occurs when
  *			the expiration occurs and etimer poll is called from the ISR.
@@ -130,7 +129,6 @@ clock_update_expiration_time(clock_time_t expiration_time)
 {
   nrf_clock_update_expiration_time(expiration_time);
 }
-#endif
 
 /**
  * @}

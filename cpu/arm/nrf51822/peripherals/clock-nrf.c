@@ -70,15 +70,15 @@ rtc_init(void)
   /* Set prescaler so that TICK freq is CLOCK_SECOND */
   NRF_RTC1->PRESCALER = COUNTER_PRESCALER;
 
-#if TICKLESS == true
+ if (TICKLESS){
   /* Enable overflow event and overflow interrupt */
   NRF_RTC1->EVTENSET      = RTC_EVTENSET_OVRFLW_Msk;;
   NRF_RTC1->INTENSET      = RTC_INTENSET_OVRFLW_Msk;
-#else
+ }else{
   /* Enable TICK event and TICK interrupt: */
   NRF_RTC1->EVTENSET = RTC_EVTENSET_TICK_Msk;
   NRF_RTC1->INTENSET = RTC_INTENSET_TICK_Msk;
-#endif
+ }
 
   /* Enable Interrupt for RTC1 in the core */
   NVIC_EnableIRQ(RTC1_IRQn);
@@ -93,11 +93,11 @@ rtc_init(void)
 clock_time_t
 nrf_clock_time(void)
 {
-#if TICKLESS == true
+  if(TICKLESS){
 	return NRF_RTC1->COUNTER;
-#else
+  }else{
     return current_clock;
-#endif
+  }
 }
 
 /** \brief Function to return the \ref current_seconds
@@ -108,9 +108,9 @@ nrf_clock_time(void)
 unsigned long
 nrf_clock_seconds(void)
 {
-#if TICKLESS == true
+  if(TICKLESS){
 	current_seconds = seconds_offset + ((seconds_ovr*16777216 + NRF_RTC1->COUNTER) / CLOCK_SECOND);
-#endif
+  }
   return current_seconds;
 }
 
@@ -121,14 +121,13 @@ nrf_clock_seconds(void)
 void
 nrf_clock_set_seconds(unsigned long sec)
 {
-#if TICKLESS == true
+  if(TICKLESS){
 	seconds_offset = sec - ((seconds_ovr*16777216 + NRF_RTC1->COUNTER) / CLOCK_SECOND);
-#else
+  }else{
   	current_seconds = sec;
-#endif
+  }
 }
 
-#if TICKLESS == true
 /** \brief Function initializes code to call etimer poll based on expiration time received
  *			The counter compare interrupt is initialized so that the interrupt occurs when
  *			the expiration occurs and etimer poll is called from the ISR.
@@ -148,7 +147,6 @@ nrf_clock_update_expiration_time(clock_time_t expiration_time)
   NRF_RTC1->CC[1]         = expiration_time;
   NRF_RTC1->EVENTS_COMPARE[1] = 0;
 }
-#endif
 
 /** \brief Function for handling the RTC1 interrupts.
  * If the \ref TICKLESS is TRUE then the interrupt sources can be
@@ -165,37 +163,35 @@ nrf_clock_update_expiration_time(clock_time_t expiration_time)
 void
 RTC1_IRQHandler()
 {
-#if TICKLESS == true
+  if(TICKLESS){
+	  if(NRF_RTC1->EVENTS_OVRFLW == 1){
+		  NRF_RTC1->EVENTS_OVRFLW = 0;
+		  seconds_ovr++;
+	  }
+	  if(NRF_RTC1->EVENTS_COMPARE[1] == 1){
+		  NRF_RTC1->EVENTS_COMPARE[1] = 0;
+		  // Disable COMPARE1 event and COMPARE1 interrupt:
+		  NRF_RTC1->EVTENCLR      = RTC_EVTENSET_COMPARE1_Msk;
+		  NRF_RTC1->INTENCLR      = RTC_INTENSET_COMPARE1_Msk;
+		  //printf("poll\n");
+		  etimer_request_poll();
+	  }
+  }else{
+      NRF_RTC1->EVENTS_TICK = 0;
+	  current_clock++;
 
-  if(NRF_RTC1->EVENTS_OVRFLW == 1){
-	  NRF_RTC1->EVENTS_OVRFLW = 0;
-	  seconds_ovr++;
-  }
-  if(NRF_RTC1->EVENTS_COMPARE[1] == 1){
-	  NRF_RTC1->EVENTS_COMPARE[1] = 0;
-	  // Disable COMPARE1 event and COMPARE1 interrupt:
-	  NRF_RTC1->EVTENCLR      = RTC_EVTENSET_COMPARE1_Msk;
-	  NRF_RTC1->INTENCLR      = RTC_INTENSET_COMPARE1_Msk;
-	  //printf("poll\n");
-	  etimer_request_poll();
-  }
-#else
-    NRF_RTC1->EVENTS_TICK = 0;
-  current_clock++;
+	  if(etimer_pending()){
+		if(etimer_next_expiration_time() <= current_clock) {
+		  etimer_request_poll();
+		  /* printf("%d,%d\n", clock_time(),etimer_next_expiration_time   ()); */
+		}
+	  }
 
-  if(etimer_pending()){
-    if(etimer_next_expiration_time() <= current_clock) {
-      etimer_request_poll();
-      /* printf("%d,%d\n", clock_time(),etimer_next_expiration_time   ()); */
-    }
+	  if(--second_countdown == 0) {
+		current_seconds++;
+		second_countdown = CLOCK_SECOND;
+	  }
   }
-
-  if(--second_countdown == 0) {
-    current_seconds++;
-    second_countdown = CLOCK_SECOND;
-  }
-
-#endif
 }
 
 /**
