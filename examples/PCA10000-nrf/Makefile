@@ -1,4 +1,4 @@
-CONTIKI_PROJECT = hello-world blink-hello
+CONTIKI_PROJECT = hello-world blink-hello BLE-test
 
 all: $(CONTIKI_PROJECT) 
 

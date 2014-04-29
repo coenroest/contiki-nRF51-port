@@ -81,6 +81,7 @@ rtc_init(void)
  }
 
   /* Enable Interrupt for RTC1 in the core */
+  NVIC_SetPriority(RTC1_IRQn, RTC1_IRQ_PRI);
   NVIC_EnableIRQ(RTC1_IRQn);
 
   NRF_RTC1->TASKS_START = 1;

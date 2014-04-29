@@ -91,7 +91,7 @@ simple_uart_putstring(const uint8_t * str)
 void
 simple_uart_init(){
 	  simple_uart_config(RTS_PIN_NUMBER, TX_PIN_NUMBER, CTS_PIN_NUMBER,
-			  RX_PIN_NUMBER, UART_BAUDRATE, 12, HWFC);
+			  RX_PIN_NUMBER, UART_BAUDRATE, 3, HWFC);
 	  serial_line_init();
 }/*---------------------------------------------------------------------------*/
  void

@@ -12,6 +12,7 @@ NM      := $(GCC_INSTALL_ROOT)/bin/$(GCC_PREFIX)-nm
 OBJDUMP := $(GCC_INSTALL_ROOT)/bin/$(GCC_PREFIX)-objdump
 OBJCOPY := $(GCC_INSTALL_ROOT)/bin/$(GCC_PREFIX)-objcopy
 GDB     := $(GCC_INSTALL_ROOT)/bin/$(GCC_PREFIX)-gdb
+SIZE	:= $(GCC_INSTALL_ROOT)/bin/$(GCC_PREFIX)-size
 
 MK	:= mkdir -p
 RM	:= rm -rf
@@ -30,6 +31,7 @@ BOARD			:= BOARD_PCA10000
 CPU				:= cortex-m0
 DEVICE 			:= NRF51
 DEVICESERIES 	:= nrf51
+BLE_REQD		:= BLE_STACK_SUPPORT_REQD
 
 ### CPU-dependent cleanup files
 CLEAN += *.d *.elf *.hex *.bin
@@ -40,14 +42,14 @@ JLINK_DIR 		= /opt/SEGGER/JLink/
 JLINK 			= $(JLINK_DIR)JLinkExe
 JLINKGDBSERVER	= $(JLINK_DIR)JLinkGDBServer
 
-FLASH_START_ADDRESS	= 0
-#SOFTDEVICE 			= lib/softdevice/s110_nrf51822_5.1.0_softdevice.hex
+FLASH_START_ADDRESS	= 0x14000
+SOFTDEVICE 			= s110_nrf51822_6.0.0_softdevice.hex
 
 # Include directories
-INCLUDEDIRS	 = $(shell find . -type d)
+INCLUDEDIRS	 = $(shell find $(CONTIKI_CPU) -type d)
 INCLUDEDIRS	+= $(GCC_INSTALL_ROOT)/lib/gcc/$(GCC_PREFIX)/$(GCC_VERSION)/include/
 INCLUDEDIRS	+= $(GCC_INSTALL_ROOT)/lib/gcc/$(GCC_PREFIX)/$(GCC_VERSION)/include-fixed/
-INCLUDEDIRS	+= $(GCC_INSTALL_ROOT)/$(GCC_PREFIX)/include/
+#$(info "Included: $(INCLUDEDIRS) " )
  
 ### Compiler related stuff
 ###
@@ -60,6 +62,7 @@ CFLAGS	+= --std=gnu99
 CFLAGS	+= -Wall
 CFLAGS	+= -D$(DEVICE)
 CFLAGS	+= -D$(BOARD)
+CFLAGS  += -D$(BLE_REQD)
 CFLAGS	+= $(patsubst %,-I%, $(INCLUDEDIRS))
 
 ASFLAGS = $(patsubst %,-I%, $(INCLUDEDIRS))
@@ -71,7 +74,7 @@ LDDIRS 	 = $(GCC_INSTALL_ROOT)/$(GCC_PREFIX)/lib/armv6-m
 LDDIRS 	+= $(GCC_INSTALL_ROOT)/lib/gcc/$(GCC_PREFIX)/$(GCC_VERSION)/armv6-m
 LDDIRS	+= $(LINK_DIR)
 
-LD_SCRIPT = $(CONTIKI_CPU)/$(LINK_DIR)/gcc_nrf51_blank_xxaa.ld
+LD_SCRIPT = $(CONTIKI_CPU)/$(LINK_DIR)/gcc_nrf51_s110_xxaa.ld
 
 LDFLAGS = -Xlinker
 LDFLAGS += -Map=$(TARGET).map
@@ -81,28 +84,35 @@ LDFLAGS += -mabi=aapcs
 LDFLAGS += -T$(LD_SCRIPT)
 LDFLAGS	+= -D$(DEVICE)
 LDFLAGS	+= -D$(BOARD)
+LDFLAGS += -D$(BLE_REQD)
 LDFLAGS	+= $(patsubst %,-L%, $(LDDIRS))
 
 ### CPU-dependent directories
 #CONTIKI_CPU_DIRS = $(shell find $(CONTIKI_CPU) -type d)
-CONTIKI_CPU_DIRS = . nrf gcc contiki link peripherals
+CONTIKI_CPU_DIRS = . nrf gcc contiki link peripherals sdk
 
 ### CPU-dependent source files
 #CONTIKI_CPU_SOURCEFILES = $(shell find . -name *.c | awk -F/ '{print $$NF}')
 CONTIKI_CPU_SOURCEFILES = system_nrf51.c clock.c rtimer-arch.c 
 CONTIKI_CPU_SOURCEFILES += clock-nrf.c simple-uart.c nrf-delay.c
+CONTIKI_CPU_SOURCEFILES += softdevice_handler.c ble_advdata.c
 #ASSEMBLY_SRC = gcc_startup_$(DEVICESERIES).S
 CONTIKI_CPU_SOURCEFILES += gcc-startup-$(DEVICESERIES).S
 CONTIKI_SOURCEFILES += $(CONTIKI_CPU_SOURCEFILES)
 
 #Create binary files 
 UPLOAD_TARGETS = $(CONTIKI_PROJECT:=.bin)
+TARGET_SIZE = $(CONTIKI_PROJECT:=.$(TARGET))
 obj-bin: $(UPLOAD_TARGETS)
 
 %.bin: %.$(TARGET)
 	@echo
 	@echo "Create binary(.bin) file from: " $<
 	$(OBJCOPY) -O binary $< $@
+
+## Find out the size of the compiled file 
+size : 
+	$(SIZE) $(TARGET_SIZE)
 
 ## Program device/Reset device
 upload: rm.jlink upload.jlink 
@@ -111,23 +121,24 @@ upload: rm.jlink upload.jlink
 	@echo "Done uploading"
 	
 rm.jlink:
-	-rm -rf upload.jlink
+	-rm -rf *.jlink
 		
 upload.jlink:
-	echo "device nrf51822\nspeed 1000\nw4 4001e504 1\nloadbin $(BIN_FILE) $(FLASH_START_ADDRESS)\nr\ng\nqc\n" > upload.jlink
+ifndef BIN_FILE
+	BIN_FILE=BLE-test.bin
+endif
+	echo "device nrf51822\nspeed 1000\nw4 4001e504 1\nloadbin $(PWD)/$(BIN_FILE) $(FLASH_START_ADDRESS)\nr\ng\nqc\n" > upload.jlink
 		  
-upload-softdevice: upload-softdevice.jlink stopdebug
-	@echo
+upload-softdevice: rm.jlink upload-softdevice.jlink
 	@echo "Convert from hex to binary. Split original hex in two to avoid huge (>250 MB) binary file with just 0s. "
-	$(OBJCOPY) -Iihex -Obinary --remove-section .sec3 $(SOFTDEVICE) $(OUTPUT_DIR)/_mainpart.bin
-	$(OBJCOPY) -Iihex -Obinary --remove-section .sec1 --remove-section .sec2 $(SOFTDEVICE) $(OUTPUT_DIR)/_uicr.bin
-	$(JLINK) $(OUTPUT_DIR)/upload-softdevice.jlink
+	$(OBJCOPY) -Iihex -Obinary --remove-section .sec3 $(CONTIKI_CPU)/$(SOFTDEVICE) $(PWD)/_mainpart.bin
+	$(OBJCOPY) -Iihex -Obinary --remove-section .sec1 --remove-section .sec2 $(CONTIKI_CPU)/$(SOFTDEVICE) $(PWD)/_uicr.bin
+	$(JLINK) $(PWD)/upload-softdevice.jlink
 
 upload-softdevice.jlink:
-	@echo
 	@echo "Do magic. Write to NVMC to enable erase, do erase all and erase UICR, reset, enable writing, load mainpart bin, load uicr bin. Reset."
 	@echo " Resetting in between is needed to disable the protections. "
-	echo "w4 4001e504 1\nloadbin \"$(OUTPUT_DIR)/_mainpart.bin\" 0\nloadbin \"$(OUTPUT_DIR)/_uicr.bin\" 0x10001000\nr\ng\nexit\n" > $(OUTPUT_DIR)/upload-softdevice.jlink
+	echo "w4 4001e504 1\nloadbin \"$(PWD)/_mainpart.bin\" 0\nloadbin \"$(PWD)/_uicr.bin\" 0x10001000\nr\ng\nexit\n" > $(PWD)/upload-softdevice.jlink
 
 recover: pin-reset.jlink
 	$(JLINK) pin-reset.jlink
@@ -141,4 +152,4 @@ erase-all: erase-all.jlink
 erase-all.jlink:
 	echo "device nrf51822\nw4 4001e504 2\nw4 4001e50c 1\nw4 4001e514 1\nr\nexit\n" > erase-all.jlink
 		  
-.PHONY: upload upload-softdevice erase-all recover
+.PHONY: upload upload-softdevice erase-all recover size

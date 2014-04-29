@@ -44,6 +44,7 @@ void rtimer_arch_init(void){
     // Enable overflow event and overflow interrupt:
     NRF_TIMER1->INTENSET      = TIMER_INTENSET_COMPARE0_Msk;
 
+    NVIC_SetPriority(TIMER1_IRQn, TIMER1_IRQ_PRI);
     NVIC_EnableIRQ(TIMER1_IRQn);    // Enable Interrupt for TIMER1 in the core.
 
     NRF_TIMER1->TASKS_START   = 1;                    		// Start timer.

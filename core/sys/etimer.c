@@ -74,10 +74,12 @@ update_time(void)
       }
     }
     next_expiration = now + tdist;
+#ifdef TICKLESS 
     if (TICKLESS){
 		/* Send the next expiration time so that the platform can be TICKLESS */
 		clock_update_expiration_time(next_expiration);
     }
+#endif
   }
 }
 /*---------------------------------------------------------------------------*/

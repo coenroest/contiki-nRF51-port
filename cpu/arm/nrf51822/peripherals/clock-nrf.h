@@ -25,6 +25,7 @@
 
 /** LF Clock frequency in Hertz, constant. */
 #define LFCLK_FREQUENCY           (32768UL)
+#define RTC1_IRQ_PRI				3
 
 /** \brief Prescalar value required for RTC initialization.
  *  Based on the formula f = LFCLK/(prescaler + 1)
