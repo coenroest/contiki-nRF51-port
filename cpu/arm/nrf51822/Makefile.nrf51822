@@ -78,6 +78,8 @@ LD_SCRIPT = $(CONTIKI_CPU)/$(LINK_DIR)/gcc_nrf51_s110_xxaa.ld
 
 LDFLAGS = -Xlinker
 LDFLAGS += -Map=$(TARGET).map
+LDFLAGS += --specs=nano.specs
+LDFLAGS += -u _printf_float
 LDFLAGS += -mcpu=$(CPU) 
 LDFLAGS += -mthumb 
 LDFLAGS += -mabi=aapcs 
