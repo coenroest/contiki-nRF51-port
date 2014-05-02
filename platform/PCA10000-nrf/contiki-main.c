@@ -31,9 +31,9 @@ main(void)
   clock_init();
   rtimer_init();
   leds_init();
-  simple_uart_init();
 
   process_init();
+  simple_uart_init();
 
   /* Testing of the basic peripherals */
   leds_blink();
@@ -51,7 +51,7 @@ main(void)
     } while(process_count > 0);
 
     /* We have serviced all pending events. Enter a Low-Power mode. */
-    __WFI();
+    __WFE();
   }
 }
 /*---------------------------------------------------------------------------*/

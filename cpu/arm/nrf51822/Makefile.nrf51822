@@ -97,7 +97,7 @@ CONTIKI_CPU_DIRS = . nrf gcc contiki link peripherals sdk
 #CONTIKI_CPU_SOURCEFILES = $(shell find . -name *.c | awk -F/ '{print $$NF}')
 CONTIKI_CPU_SOURCEFILES = system_nrf51.c clock.c rtimer-arch.c 
 CONTIKI_CPU_SOURCEFILES += clock-nrf.c simple-uart.c nrf-delay.c
-CONTIKI_CPU_SOURCEFILES += softdevice_handler.c ble_advdata.c
+CONTIKI_CPU_SOURCEFILES += softdevice_handler.c ble_advdata.c pstorage.c ble_conn_params.c app_scheduler.c
 #ASSEMBLY_SRC = gcc_startup_$(DEVICESERIES).S
 CONTIKI_CPU_SOURCEFILES += gcc-startup-$(DEVICESERIES).S
 CONTIKI_SOURCEFILES += $(CONTIKI_CPU_SOURCEFILES)
@@ -126,9 +126,6 @@ rm.jlink:
 	-rm -rf *.jlink
 		
 upload.jlink:
-ifndef BIN_FILE
-	BIN_FILE=BLE-test.bin
-endif
 	echo "device nrf51822\nspeed 1000\nw4 4001e504 1\nloadbin $(PWD)/$(BIN_FILE) $(FLASH_START_ADDRESS)\nr\ng\nqc\n" > upload.jlink
 		  
 upload-softdevice: rm.jlink upload-softdevice.jlink

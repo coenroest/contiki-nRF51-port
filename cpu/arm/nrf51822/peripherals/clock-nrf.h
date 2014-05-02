@@ -18,7 +18,7 @@
 
 #include "nrf.h"
 #include "clock.h"
-#include "leds.h"
+#include "contiki-conf.h"
 #include "nrf-delay.h"
 #include "nrf-gpio.h"
 #include "simple-uart.h"
