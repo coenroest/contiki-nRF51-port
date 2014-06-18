@@ -43,6 +43,12 @@ static void on_write(ble_lbs_t * p_lbs, ble_evt_t * p_ble_evt)
 {
     ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
     
+    if ((p_evt_write->handle == (p_lbs->alarm_char_handles.value_handle+1)) &&
+		(p_evt_write->len == 2))
+	{
+		printf("AttWr:%X%X\n",p_evt_write->data[0],p_evt_write->data[1]);
+	}
+
     if ((p_evt_write->handle == p_lbs->alarm_char_handles.value_handle) &&
 		(p_evt_write->len == 4) &&
 		(p_lbs->alarm_write_handler != NULL))

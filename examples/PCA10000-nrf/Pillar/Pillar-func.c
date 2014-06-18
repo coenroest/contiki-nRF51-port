@@ -35,9 +35,11 @@
 #include "ble_lbs.h"
 #include "contiki.h"
 #include "serial-line.h"
+#include "ble_l2cap.h"
 
 PROCESS(alarm_timer_process, "Alarm timer process");
 PROCESS(alarm_ring_process, "Alarm ring process");
+PROCESS(l2cap_process, "L2CAP process");
 
 #define ADVERTISING_LED_PIN_NO          LEDS_RED								/**< Is on when device is advertising. */
 #define CONNECTED_LED_PIN_NO            LEDS_GREEN                              /**< Is on when device has connected. */
@@ -48,8 +50,8 @@ PROCESS(alarm_ring_process, "Alarm ring process");
 
 #define DEVICE_NAME                     "Pillar"                           			/**< Name of device. Will be included in the advertising data. */
 
-#define APP_ADV_INTERVAL                1000                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
-#define APP_ADV_TIMEOUT_IN_SECONDS      BLE_GAP_ADV_TIMEOUT_LIMITED_MAX				/**< The advertising timeout (in units of seconds). */
+#define APP_ADV_INTERVAL                2000                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
+#define APP_ADV_TIMEOUT_IN_SECONDS      0x0000										/**< The advertising timeout (in units of seconds). */
 
 #define APP_TIMER_PRESCALER             COUNTER_PRESCALER		                    /**< Value of the RTC1 PRESCALER register. */
 
@@ -186,7 +188,7 @@ void advertising_init(void)
 	uint32_t      err_code;
 	ble_advdata_t advdata;
 	ble_advdata_t scanrsp;
-	uint8_t       flags = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
+	uint8_t       flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
 	ble_uuid_t adv_uuids[] = {{LBS_UUID_SERVICE, m_lbs.uuid_type}};
 
@@ -506,6 +508,10 @@ void ble_stack_init(void)
 	APP_ERROR_CHECK(err_code);
 }
 
+void l2cap_init(void){
+	process_start(&l2cap_process, NULL);
+}
+
 PROCESS_THREAD(alarm_timer_process, ev, data)
 {
   PROCESS_BEGIN();
@@ -555,5 +561,36 @@ PROCESS_THREAD(alarm_ring_process, ev, data)
 	  }
   }
 
+  PROCESS_END();
+}
+
+
+PROCESS_THREAD(l2cap_process, ev, data)
+{
+  PROCESS_BEGIN();
+  sd_ble_l2cap_cid_register(0x41);
+  while(1){
+		PROCESS_YIELD();
+		if(ev == serial_line_event_message){
+			uint8_t * recd = (uint8_t *) data;
+			if(recd[0] == 'T' && recd[1] == 'w' && recd[2] == 'o'){
+				uint32_t err_code;
+				ble_l2cap_header_t tx_head;
+
+				uint8_t tx_data[] = "Howdy!";
+				printf("%s\n",tx_data);
+
+				tx_head.cid = 0x41;
+				tx_head.len = sizeof(tx_data);
+
+				err_code = sd_ble_l2cap_tx (m_conn_handle, &tx_head, tx_data);
+				if (err_code != BLE_ERROR_NO_TX_BUFFERS) {
+						APP_ERROR_CHECK(err_code);
+				}else{
+					printf("No buffers available\n");
+				}
+			}
+		}
+  }
   PROCESS_END();
 }

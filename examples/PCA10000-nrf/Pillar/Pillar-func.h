@@ -37,4 +37,6 @@ void advertising_start(void);
 
 void ble_stack_init(void);
 
+void l2cap_init(void);
+
 #endif /* PILLAR_FUNC_H_ */
