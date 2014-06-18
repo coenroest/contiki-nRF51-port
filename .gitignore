@@ -89,3 +89,6 @@ contiki-cc2530dk.lib
 # rl78 build artifacts
 *.eval-adf7xxxmb4z
 *.eval-adf7xxxmb4z.srec
+
+cpu/arm/nrf51822/sdk
+cpu/arm/nrf51822/sdk/include_nrfSDK
