@@ -40,7 +40,7 @@ static volatile uint32_t current_seconds = 0;
 static volatile uint32_t seconds_ovr = 0;
 /** Variable to store the seconds offset if \ref clock_set_seconds is called.
  * 	Used with TICKLESS implementation */
-static volatile uint32_t seconds_offset = 0;
+static volatile int32_t seconds_offset = 0;
 /** Variable to store the number of TICK of the clock.
  * 	Used without TICKLESS implementation */
 static volatile clock_time_t current_clock = 0;
