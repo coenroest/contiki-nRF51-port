@@ -1,7 +1,11 @@
 #### Toolchain commands
 ####
-GCC_INSTALL_ROOT	:= /home/prithvi/DevelopmentTools/gcc-arm-none-eabi-4_8-2013q4
-GCC_VERSION			:= 4.8.3
+
+#FIXME: quick fix to get targets working in Eclipse
+PWD = $(shell pwd)
+
+GCC_INSTALL_ROOT	:= /usr/local/gcc-arm-none-eabi-4_9-2014q4
+GCC_VERSION			:= 4.9.0
 GCC_PREFIX			:= arm-none-eabi
 
 CC      := $(GCC_INSTALL_ROOT)/bin/$(GCC_PREFIX)-gcc
@@ -27,7 +31,7 @@ LINK_DIR		= link
 
 ### Device related stuff
 ###
-BOARD			:= BOARD_PCA10000
+BOARD			:= BOARD_CORE51822
 CPU				:= cortex-m0
 DEVICE 			:= NRF51
 DEVICESERIES 	:= nrf51
@@ -38,12 +42,12 @@ CLEAN += *.d *.elf *.hex *.bin
 
 ### Programmer
 ###
-JLINK_DIR 		= /opt/SEGGER/JLink/
+JLINK_DIR 		= /Applications/SEGGER/JLink/
 JLINK 			= $(JLINK_DIR)JLinkExe
 JLINKGDBSERVER	= $(JLINK_DIR)JLinkGDBServer
 
-FLASH_START_ADDRESS	= 0x14000
-SOFTDEVICE 			= s110_nrf51822_6.0.0_softdevice.hex
+FLASH_START_ADDRESS	= 0x0
+#SOFTDEVICE 			= s110_nrf51822_6.0.0_softdevice.hex
 
 # Include directories
 INCLUDEDIRS	 = $(shell find $(CONTIKI_CPU) -type d)
@@ -74,7 +78,9 @@ LDDIRS 	 = $(GCC_INSTALL_ROOT)/$(GCC_PREFIX)/lib/armv6-m
 LDDIRS 	+= $(GCC_INSTALL_ROOT)/lib/gcc/$(GCC_PREFIX)/$(GCC_VERSION)/armv6-m
 LDDIRS	+= $(LINK_DIR)
 
-LD_SCRIPT = $(CONTIKI_CPU)/$(LINK_DIR)/gcc_nrf51_s110_xxaa.ld
+#LD_SCRIPT = $(CONTIKI_CPU)/$(LINK_DIR)/gcc_nrf51_s110_xxaa.ld
+LD_SCRIPT = $(CONTIKI_CPU)/$(LINK_DIR)/gcc_nrf51_blank_xxaa.ld
+
 
 LDFLAGS = -Xlinker
 LDFLAGS += -Map=$(TARGET).map
@@ -97,7 +103,7 @@ CONTIKI_CPU_DIRS = . nrf gcc contiki link peripherals sdk
 #CONTIKI_CPU_SOURCEFILES = $(shell find . -name *.c | awk -F/ '{print $$NF}')
 CONTIKI_CPU_SOURCEFILES = system_nrf51.c clock.c rtimer-arch.c 
 CONTIKI_CPU_SOURCEFILES += clock-nrf.c simple-uart.c nrf-delay.c
-CONTIKI_CPU_SOURCEFILES += softdevice_handler.c ble_advdata.c pstorage.c ble_conn_params.c app_scheduler.c
+#CONTIKI_CPU_SOURCEFILES += softdevice_handler.c ble_advdata.c pstorage.c ble_conn_params.c app_scheduler.c
 #ASSEMBLY_SRC = gcc_startup_$(DEVICESERIES).S
 CONTIKI_CPU_SOURCEFILES += gcc-startup-$(DEVICESERIES).S
 CONTIKI_SOURCEFILES += $(CONTIKI_CPU_SOURCEFILES)
@@ -126,7 +132,7 @@ rm.jlink:
 	-rm -rf *.jlink
 		
 upload.jlink:
-	echo "device nrf51822\nspeed 1000\nw4 4001e504 1\nloadbin $(PWD)/$(BIN_FILE) $(FLASH_START_ADDRESS)\nr\ng\nqc\n" > upload.jlink
+	echo "device nrf51822\nspeed 1000\nw4 4001e504 1\nloadbin $(PWD)/$(UPLOAD_TARGETS) $(FLASH_START_ADDRESS)\nr\ng\nqc\n" > upload.jlink
 		  
 upload-softdevice: rm.jlink upload-softdevice.jlink
 	@echo "Convert from hex to binary. Split original hex in two to avoid huge (>250 MB) binary file with just 0s. "
