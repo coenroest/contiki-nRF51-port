@@ -26,6 +26,7 @@
 *.cc2538dk
 *.report
 *.PCA10000-nrf
+*.Core51822
 *.jlink
 summary
 *.summary
@@ -92,3 +93,4 @@ contiki-cc2530dk.lib
 
 cpu/arm/nrf51822/sdk
 cpu/arm/nrf51822/sdk/include_nrfSDK
+/Release/

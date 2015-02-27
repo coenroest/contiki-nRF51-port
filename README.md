@@ -1,6 +1,8 @@
 nrf51822's port to Contiki
 ==========================
-This repository contains nrf51822's port to Contiki. Right now nothing related to the radio is added. The Doxygen documentation of the port is available [here](http://rumblingsofearthlord.com/nrf51Contiki/). For more information visit the blog [rumblingsOfEarthLord](http://rumblingsofearthlord.com/blog/).
+This repository contains nrf51822's port to Contiki. Right now nothing related to the radio is added. 
+The Doxygen documentation of the port is available [here](http://rumblingsofearthlord.com/nrf51Contiki/). 
+For more information visit the blog [rumblingsOfEarthLord](http://rumblingsofearthlord.com/blog/).
 
 The Contiki Operating System
 ============================

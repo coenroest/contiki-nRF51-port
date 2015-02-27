@@ -1,6 +1,6 @@
 TARGET = PCA10000-nrf
 
-CONTIKI_PROJECT = hello-world blink-hello BLE-test
+CONTIKI_PROJECT = blink-hello
 
 all: $(CONTIKI_PROJECT) 
 

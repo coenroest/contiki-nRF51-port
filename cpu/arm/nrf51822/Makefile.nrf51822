@@ -31,7 +31,7 @@ LINK_DIR		= link
 
 ### Device related stuff
 ###
-BOARD			:= BOARD_CORE51822
+BOARD			:= BOARD_Core51822
 CPU				:= cortex-m0
 DEVICE 			:= NRF51
 DEVICESERIES 	:= nrf51
