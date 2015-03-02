@@ -18,6 +18,8 @@
 #include "simple-uart.h"
 #include "dev/leds.h"
 
+#include "nrf-radio.h"
+
 /*---------------------------------------------------------------------------*/
 /**
  * \brief Main routine for nrf51822's PCA10000 platform
@@ -41,6 +43,9 @@ main(void)
 
   process_start(&etimer_process, NULL);
   ctimer_init();
+
+  nrf_radio_init();
+
 
   autostart_start(autostart_processes);
 

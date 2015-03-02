@@ -1,6 +1,6 @@
 TARGET = Core51822
 
-CONTIKI_PROJECT = blink-hello
+CONTIKI_PROJECT = tx-hello rx-hello
 
 all: $(CONTIKI_PROJECT) 
 

@@ -40,6 +40,7 @@
 #define RTS_PIN_NUMBER 	8
 /** Hardware flow control is not required in Core51822 */
 #define HWFC           	false
+
 /*---------------------------------------------------------------------------*/
 /** @} */
   

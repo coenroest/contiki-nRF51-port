@@ -19,6 +19,9 @@
 #include "stdbool.h"
 #include "nrf.h"
 
+//#ifndef NETSTACK_CONF_RADIO
+//#define NETSTACK_CONF_RADIO   nrf_radio_driver
+//#endif /* NETSTACK_CONF_RADIO */
 /*---------------------------------------------------------------------------*/
 /** Specify the UART baud rate */
 #define UART_BAUDRATE UART_BAUDRATE_BAUDRATE_Baud38400

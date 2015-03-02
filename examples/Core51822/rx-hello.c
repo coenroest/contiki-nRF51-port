@@ -9,36 +9,32 @@
 
 #include "contiki.h"
 #include "dev/leds.h"
+#include "dev/radio.h"
 #include "simple-uart.h"
+#include "nrf-radio.h"
 
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
-static struct etimer et_hello;
 static struct etimer et_blink;
-static uint16_t count;
 static uint8_t blinks;
+static uint8_t packet[4];  ///< Packet to transmit
+
 /*---------------------------------------------------------------------------*/
-PROCESS(hello_world_process, "Hello world process");
+PROCESS(rx_process, "RX process");
 PROCESS(blink_process, "LED blink process");
-AUTOSTART_PROCESSES(&hello_world_process, &blink_process);
+AUTOSTART_PROCESSES(&rx_process, &blink_process);
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(hello_world_process, ev, data)
+PROCESS_THREAD(rx_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  etimer_set(&et_hello, CLOCK_SECOND * 4);
-  count = 0;
+  // Set payload pointer
+    NRF_RADIO->PACKETPTR = (uint32_t)packet;
 
   while(1) {
-    PROCESS_WAIT_EVENT();
 
-    if(ev == PROCESS_EVENT_TIMER) {
-      printf("Sensor says #%u\n", count);
+      nrf_radio_read(packet, 4);
 
-      count++;
-
-      etimer_reset(&et_hello);
-    }
   }
 
   PROCESS_END();
@@ -58,7 +54,7 @@ PROCESS_THREAD(blink_process, ev, data)
     leds_off(LEDS_ALL);
     leds_on(blinks & LEDS_ALL);
     blinks++;
-    printf("Blink... (state %c)\n", leds_get());
+    //printf("Blink... (state %c)\n", leds_get());
   }
 
   PROCESS_END();
