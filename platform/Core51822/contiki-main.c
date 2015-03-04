@@ -44,6 +44,7 @@ main(void)
   process_start(&etimer_process, NULL);
   ctimer_init();
 
+  /* Configure the nRF51 radio */
   nrf_radio_init();
 
 

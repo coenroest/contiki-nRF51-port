@@ -17,7 +17,8 @@
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink;
 static uint8_t blinks;
-static uint8_t packet[4];  ///< Packet to transmit
+static uint8_t txbuffer[4];  ///< Packet to transmit
+static int count;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(tx_process, "TX process");
@@ -28,13 +29,13 @@ PROCESS_THREAD(tx_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  // Set payload pointer
-    NRF_RADIO->PACKETPTR = (uint32_t)packet;
+  count = 0;
 
-  while(1) {
-
-      nrf_radio_transmit(4);
-
+  while(1)
+  {
+      txbuffer[0] = count;
+      nrf_radio_send(txbuffer, 4);
+      count++;
   }
 
   PROCESS_END();

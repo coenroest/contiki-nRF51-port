@@ -17,8 +17,7 @@
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink;
 static uint8_t blinks;
-static uint8_t packet[4];  ///< Packet to transmit
-
+static uint8_t rxbuffer[4];  ///< Packet to transmit
 /*---------------------------------------------------------------------------*/
 PROCESS(rx_process, "RX process");
 PROCESS(blink_process, "LED blink process");
@@ -28,12 +27,13 @@ PROCESS_THREAD(rx_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  // Set payload pointer
-    NRF_RADIO->PACKETPTR = (uint32_t)packet;
+  //NRF_RADIO->PACKETPTR = (uint32_t)packet;
+
 
   while(1) {
 
-      nrf_radio_read(packet, 4);
+      nrf_radio_read(rxbuffer, 4);
+      printf("Contents of packet: %d\n\r", (int)*rxbuffer);
 
   }
 

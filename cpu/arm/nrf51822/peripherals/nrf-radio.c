@@ -1,4 +1,5 @@
 #include <string.h>
+#include <inttypes.h>
 
 #include "contiki.h"
 #include "nrf-radio.h"
@@ -16,28 +17,40 @@
 #define PACKET1_STATIC_LENGTH            (1UL)  //!< static length in bytes
 #define PACKET1_PAYLOAD_SIZE             (1UL)  //!< payload size in bytes
 
-void nrf_radio_init(void);
+int nrf_radio_init(void);
+
+int nrf_radio_prepare(const void *payload, unsigned short payload_len);
 int nrf_radio_transmit(unsigned short transmit_len);
+int nrf_radio_send(const void *payload, unsigned short payload_len);
+
 int nrf_radio_read(void *buf, unsigned short buf_len);
+
+int nrf_radio_on(void);
+int nrf_radio_off(void);
+
+static uint8_t packet[4];  ///< Packet to transmit
+
 
 
 const struct radio_driver nrf_radio_driver =
   {
     nrf_radio_init,
-    //nrf_radio_prepare,
+    nrf_radio_prepare,
     nrf_radio_transmit,
-    //nrf_radio_send,
+    nrf_radio_send,
     nrf_radio_read,
     /* nrf_radio_set_channel, */
     /* detected_energy, */
     //nrf_radio_cca,
     //nrf_radio_receiving_packet,
     //nrf_radio_pending_packet,
-    //nrf_radio_on,
-    //nrf_radio_off,
+    nrf_radio_on,
+    nrf_radio_off,
   };
 
-void
+/*---------------------------------------------------------------------------*/
+
+int
 nrf_radio_init(void)
 {
     // Radio config
@@ -78,65 +91,89 @@ nrf_radio_init(void)
       NRF_RADIO->CRCPOLY = 0x107UL;       // CRC poly: x^8+x^2^x^1+1
     }
 
-}
+    /* Config Shortcuts like in page 86 and 88 of nRF series ref man */
+    NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
+			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
 
+    /* Set the packet pointer */
+    NRF_RADIO->PACKETPTR = (uint32_t)packet;
+
+    return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_prepare(const void *payload, unsigned short payload_len)
+{
+    /* Copy the payload to the location assigned to packet pointer */
+    memcpy(packet, payload, payload_len);
+
+    return 1;
+}
+/*---------------------------------------------------------------------------*/
 int
 nrf_radio_transmit(unsigned short transmit_len)
 {
 
-    NRF_RADIO->EVENTS_READY = 0U;
-    NRF_RADIO->TASKS_TXEN = 1;
-    while (NRF_RADIO->EVENTS_READY == 0U)
-    {
-    }
-    NRF_RADIO->TASKS_START = 1U;
-    NRF_RADIO->EVENTS_END = 0U;
-    while(NRF_RADIO->EVENTS_END == 0U)
-    {
-    }
+    NRF_RADIO->TASKS_TXEN = 1;	// With shortcuts enabled, this is the only command needed
 
-    printf("PACKET SEND\n");
-
-    NRF_RADIO->EVENTS_DISABLED = 0U;
-    // Disable radio
-    NRF_RADIO->TASKS_DISABLE = 1U;
-    while(NRF_RADIO->EVENTS_DISABLED == 0U)
-    {
-    }
+    printf("PACKET SEND\n\r");
 
     return 1;
 }
-
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_send(const void *payload, unsigned short payload_len)
+{
+  nrf_radio_prepare(payload, payload_len);
+  return nrf_radio_transmit(payload_len);
+}
+/*---------------------------------------------------------------------------*/
 int
 nrf_radio_read(void *buf, unsigned short buf_len)
 {
 
-    NRF_RADIO->EVENTS_READY = 0U;
-    // Enable radio and wait for ready
-    NRF_RADIO->TASKS_RXEN = 1U;
-    while(NRF_RADIO->EVENTS_READY == 0U)
-    {
-    }
-    NRF_RADIO->EVENTS_END = 0U;
-    // Start listening and wait for address received event
-    NRF_RADIO->TASKS_START = 1U;
-    // Wait for end of packet
-    while(NRF_RADIO->EVENTS_END == 0U)
-    {
-    }
-    // Write received data to LED0 and LED1 on CRC match
-    if (NRF_RADIO->CRCSTATUS == 1U)
-    {
-	printf("PACKET RECEIVED\n");
 
+    NRF_RADIO->TASKS_RXEN = 1U; // With shortcuts enabled, this is the only command needed
+
+    if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCOk)
+    {
+	printf("PACKET RECEIVED\n\r");
+	memcpy(buf, packet, buf_len);	// Place the contents in the read buffer
+	return 1;
     }
 
-    NRF_RADIO->EVENTS_DISABLED = 0U;
-    // Disable radio
-    NRF_RADIO->TASKS_DISABLE = 1U;
-    while(NRF_RADIO->EVENTS_DISABLED == 0U)
+    else if(NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCError)
     {
+	printf("PACKET RECEIVE FAILED\n\r");
     }
 
-    return 1;
+    return 0;
 }
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_on(void)
+{
+
+  /* Difficult since there are is no global ON state,
+   * only commands to set the radio in TX or RX mode.
+   */
+
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_off(void)
+{
+  // Clear event register
+  NRF_RADIO->EVENTS_DISABLED = 0U;
+  // Disable radio
+  NRF_RADIO->TASKS_DISABLE = 1U;
+  while(NRF_RADIO->EVENTS_DISABLED == 0U)
+  {
+      /* Wait for the radio to turn off */
+  }
+
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+
