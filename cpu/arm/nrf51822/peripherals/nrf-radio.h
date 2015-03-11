@@ -15,6 +15,10 @@ int nrf_radio_read(void *buf, unsigned short buf_len);
 int nrf_radio_on(void);
 int nrf_radio_off(void);
 
+int nrf_radio_set_channel(int channel);
+
+int nrf_radio_fast_send(void);
+
 extern const struct radio_driver nrf_radio_driver;
 
 #endif /* NRF_RADIO_H_ */

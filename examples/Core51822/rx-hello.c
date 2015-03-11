@@ -15,7 +15,7 @@
 
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
-static struct etimer et_blink;
+static struct etimer et_blink, et_rx;
 static uint8_t blinks;
 static uint8_t rxbuffer[4];  ///< Packet to transmit
 /*---------------------------------------------------------------------------*/
@@ -31,6 +31,10 @@ PROCESS_THREAD(rx_process, ev, data)
 
 
   while(1) {
+
+      etimer_set(&et_rx, CLOCK_SECOND);
+
+      PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
       nrf_radio_read(rxbuffer, 4);
       printf("Contents of packet: %d\n\r", (int)*rxbuffer);

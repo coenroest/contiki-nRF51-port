@@ -15,7 +15,7 @@
 
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
-static struct etimer et_blink;
+static struct etimer et_blink, et_tx;
 static uint8_t blinks;
 static uint8_t txbuffer[4];  ///< Packet to transmit
 static int count;
@@ -33,7 +33,11 @@ PROCESS_THREAD(tx_process, ev, data)
 
   while(1)
   {
+      etimer_set(&et_tx, CLOCK_SECOND);
+
+      PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
       txbuffer[0] = count;
+
       nrf_radio_send(txbuffer, 4);
       count++;
   }

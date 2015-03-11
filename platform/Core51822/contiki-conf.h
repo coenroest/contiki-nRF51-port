@@ -1,9 +1,9 @@
 /**
- * \addtogroup PCA10000
+ * \addtogroup Core51822
  * @{
  *
  * \file
- * Platform specific configurations for PCA10000.
+ * Platform specific configurations for Core51822.
  * PCA10000's platform specific definitions required for Contiki
  * The parameters defined are Clock and RTIMER's frequency, UART baud rate,
  * Low frequency clock source and typedef related to clock, rtimer and uip stats.
