@@ -40,6 +40,10 @@ leds_arch_init(void){
 	  nrf_gpio_pin_set(LEDS_CONF_GREEN);
 	  nrf_gpio_cfg_output(LEDS_CONF_BLUE);
 	  nrf_gpio_pin_set(LEDS_CONF_BLUE);
+	  nrf_gpio_cfg_output(LEDS_CONF_YELLOW);
+	  nrf_gpio_pin_set(LEDS_CONF_YELLOW);
+	  nrf_gpio_cfg_output(LEDS_CONF_CYAN);
+	  nrf_gpio_pin_set(LEDS_CONF_CYAN);
 }
 /*---------------------------------------------------------------------------*/
 /** \brief Get the current status of the LEDs in the last three bits
@@ -49,8 +53,8 @@ leds_arch_init(void){
 uint8_t
 leds_arch_get(void){
 	uint8_t temp = 	(nrf_gpio_pin_read(LEDS_CONF_RED)*LEDS_RED)|
-							(nrf_gpio_pin_read(LEDS_CONF_BLUE)*LEDS_BLUE)|
-							(nrf_gpio_pin_read(LEDS_CONF_GREEN)*LEDS_GREEN);
+			(nrf_gpio_pin_read(LEDS_CONF_BLUE)*LEDS_BLUE)|
+			(nrf_gpio_pin_read(LEDS_CONF_GREEN)*LEDS_GREEN);
 	return ((~temp)&(LEDS_RED|LEDS_BLUE|LEDS_GREEN));
 }
 /*---------------------------------------------------------------------------*/

@@ -27,9 +27,6 @@ PROCESS_THREAD(rx_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  //NRF_RADIO->PACKETPTR = (uint32_t)packet;
-
-
   while(1) {
 
       etimer_set(&et_rx, CLOCK_SECOND);
@@ -38,6 +35,7 @@ PROCESS_THREAD(rx_process, ev, data)
 
       nrf_radio_read(rxbuffer, 4);
       printf("Contents of packet: %d\n\r", (int)*rxbuffer);
+      printf("PPI enabled address timestamp: %u\n\r", NRF_TIMER0->CC[1]);
 
   }
 

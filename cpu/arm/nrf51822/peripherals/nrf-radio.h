@@ -19,6 +19,10 @@ int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
 
+int nrf_radio_capture_sfd_time(void);
+
+//void ppi_init(void);
+
 extern const struct radio_driver nrf_radio_driver;
 
 #endif /* NRF_RADIO_H_ */

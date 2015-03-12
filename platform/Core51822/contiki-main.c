@@ -22,7 +22,7 @@
 
 /*---------------------------------------------------------------------------*/
 /**
- * \brief Main routine for nrf51822's PCA10000 platform
+ * \brief Main routine for nrf51822's Core51822 platform
  */
 int
 main(void)
@@ -39,13 +39,15 @@ main(void)
 
   /* Testing of the basic peripherals */
   leds_blink();
-  printf("Testing\r");
+  printf("Testing\n\r");
 
   process_start(&etimer_process, NULL);
   ctimer_init();
 
   /* Configure the nRF51 radio */
   nrf_radio_init();
+  /* Configure the nRF51 timer0 for timestamping */
+  nrf_timer_init();
 
 
   autostart_start(autostart_processes);

@@ -39,6 +39,8 @@ PROCESS_THREAD(tx_process, ev, data)
       txbuffer[0] = count;
 
       nrf_radio_send(txbuffer, 4);
+      printf("Contents of packet: %d\n\r", (int)*txbuffer);
+      printf("PPI enabled address timestamp: %u\n\r", NRF_TIMER0->CC[1]);
       count++;
   }
 

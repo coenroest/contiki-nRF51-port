@@ -44,6 +44,10 @@ int nrf_radio_off(void);
 int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
+int nrf_radio_capture_sfd_time(void);
+
+//void ppi_init(void);
+
 
 static uint8_t packet_ptr[4];  /* Pointer for receiving and transmitting */
 
@@ -56,6 +60,7 @@ const struct radio_driver nrf_radio_driver =
     nrf_radio_read,
     nrf_radio_set_channel,
     nrf_radio_fast_send,
+    nrf_radio_capture_sfd_time,
     /* detected_energy, */
     //nrf_radio_cca,
     //nrf_radio_receiving_packet,
@@ -83,7 +88,7 @@ static void RELEASE_LOCK(void) {
 /*---------------------------------------------------------------------------*/
 #define PACKET0_S1_SIZE                  (0UL)  //!< S1 size in bits
 #define PACKET0_S0_SIZE                  (0UL)  //!< S0 size in bits
-#define PACKET0_PAYLOAD_SIZE             (0UL)  //!< payload size in bits
+#define PACKET0_PAYLOAD_SIZE             (0UL)  //!< payload size (length) in bits
 #define PACKET1_BASE_ADDRESS_LENGTH      (4UL)  //!< base address length in bytes
 #define PACKET1_STATIC_LENGTH            (1UL)  //!< static length in bytes
 #define PACKET1_PAYLOAD_SIZE             (1UL)  //!< payload size in bytes
@@ -91,7 +96,6 @@ static void RELEASE_LOCK(void) {
 int
 nrf_radio_init(void)
 {
-
     if(locked) {
 	return 0;
     }
@@ -107,10 +111,14 @@ nrf_radio_init(void)
     NRF_RADIO->MODE = (RADIO_MODE_MODE_Nrf_2Mbit << RADIO_MODE_MODE_Pos);
 
     /* Radio address config */
-    NRF_RADIO->PREFIX0 = 0xC4C3C2E7UL;  // Prefix byte of addresses 3 to 0
-    NRF_RADIO->PREFIX1 = 0xC5C6C7C8UL;  // Prefix byte of addresses 7 to 4
-    NRF_RADIO->BASE0   = 0xE7E7E7E7UL;  // Base address for prefix 0
-    NRF_RADIO->BASE1   = 0x00C2C2C2UL;  // Base address for prefix 1-7
+    //NRF_RADIO->PREFIX0 = 0xC4C3C2E7UL;  // Prefix byte of addresses 3 to 0
+    //NRF_RADIO->PREFIX1 = 0xC5C6C7C8UL;  // Prefix byte of addresses 7 to 4
+    //NRF_RADIO->BASE0   = 0xE7E7E7E7UL;  // Base address for prefix 0
+    //NRF_RADIO->BASE1   = 0x00C2C2C2UL;  // Base address for prefix 1-7
+
+    NRF_RADIO->BASE0 = 0x42;
+    NRF_RADIO->PREFIX0 = RADIO_PREFIX0_AP0_Msk; //0x42;
+
     NRF_RADIO->TXADDRESS = 0x00UL;      // Set device address 0 to use when transmitting
     NRF_RADIO->RXADDRESSES = 0x01UL;    // Enable device address 0 to use which receiving
 
@@ -145,6 +153,9 @@ nrf_radio_init(void)
 			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
 #endif
 
+    // PPI address -> timer0 enable
+    NRF_PPI->CHEN = (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
+
     /* Set the packet pointer */
     NRF_RADIO->PACKETPTR = (uint32_t)packet_ptr;
 
@@ -162,12 +173,8 @@ nrf_radio_prepare(const void *payload, unsigned short payload_len)
 
   GET_LOCK();
 
-  PRINTF("nRF51: preparing %d bytes\n\r", payload_len);
-
-  PRINTF("size of packet_ptr: %d \n\r", sizeof(packet_ptr));
-
-  //memset(&packet_ptr, 0, sizeof(packet_ptr)); /* Why is this needed? */
-  memcpy(packet_ptr, payload, payload_len);
+  /* Switch the packet pointer to the payload */
+  NRF_RADIO->PACKETPTR = (uint32_t)payload;
 
   RELEASE_LOCK();
   return 1;
@@ -203,20 +210,16 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   GET_LOCK();
   int ret = 0;
 
-  NRF_RADIO->EVENTS_ADDRESS = 0;
   NRF_RADIO->TASKS_RXEN = 1U; /* With shortcuts enabled, this is the only command needed */
-
-  while (NRF_RADIO->EVENTS_ADDRESS == 0)
-  {
-      /* Wait for address event */
-  }
-  PRINTF("Address event happened\n\r");
 
   if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCOk)
   {
       PRINTF("PACKET RECEIVED\n\r");
-      memcpy(buf, packet_ptr, buf_len);	/* Place the contents in the read buffer */
-      ret = sizeof(packet_ptr);			/* Fix me: find actual size of packet */
+      //memcpy(buf, packet_ptr, buf_len);		/* Place the contents in the read buffer */
+
+      /* Switch the packet pointer to the payload */
+      NRF_RADIO->PACKETPTR = (uint32_t)buf;
+      ret = sizeof(buf);			/* Fix me: find actual size of packet */
   }
 
   else if(NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCError)
@@ -263,7 +266,7 @@ nrf_radio_set_channel(int channel)
     return 0;
   }
 
-  NRF_RADIO->FREQUENCY = channel;
+  NRF_RADIO->FREQUENCY = (uint8_t)channel;
   return 1;
 }
 /*---------------------------------------------------------------------------*/
@@ -295,6 +298,17 @@ nrf_radio_fast_send(void)
 
   PRINTF("Packet fast send failed\n\r");
   return 0;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_capture_sfd_time(void)
+{
+  /* TODO: does this work properly? */
+  NRF_TIMER0->TASKS_CAPTURE[0] = 1;
+  uint32_t time = NRF_TIMER0->CC[0];
+
+  // Maybe clear register and reset the timer here?
+  return time;
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(nrf_radio_process, ev, data)
