@@ -4814,6 +4814,9 @@
 #define QDEC_POWER_POWER_Disabled (0UL) /*!< Module power disabled. */
 #define QDEC_POWER_POWER_Enabled (1UL) /*!< Module power enabled. */
 
+/* ================================================================================ */
+/* ================                      RADIO                     ================ */
+/* ================================================================================ */
 
 /* Peripheral: RADIO */
 /* Description: The radio. */

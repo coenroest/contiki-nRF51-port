@@ -19,9 +19,9 @@ int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
 
-int nrf_radio_capture_sfd_time(void);
+rtimer_clock_t nrf_radio_read_sfd_timer(void);
+void RADIO_IRQHandler(void);
 
-//void ppi_init(void);
 
 extern const struct radio_driver nrf_radio_driver;
 

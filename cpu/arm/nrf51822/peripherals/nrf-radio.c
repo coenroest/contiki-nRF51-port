@@ -25,6 +25,7 @@
 #define NRF51_RADIO_MAX_PACKET_LEN 4 		/* TODO: find max value */
 
 #define RADIO_SHORTS_ENABLED 1
+#define RADIO_INTERRUPT_ENABLED 1
 
 /*---------------------------------------------------------------------------*/
 PROCESS(nrf_radio_process, "nRF Radio driver");
@@ -44,12 +45,13 @@ int nrf_radio_off(void);
 int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
-int nrf_radio_capture_sfd_time(void);
 
-//void ppi_init(void);
+rtimer_clock_t nrf_radio_read_sfd_timer(void);
 
+/* SFD timestamp in RTIMER ticks */
+static volatile uint32_t last_packet_timestamp = 0;
 
-static uint8_t packet_ptr[4];  /* Pointer for receiving and transmitting */
+//static uint8_t packet_ptr[4];  /* Pointer for receiving and transmitting */
 
 const struct radio_driver nrf_radio_driver =
 {
@@ -60,7 +62,6 @@ const struct radio_driver nrf_radio_driver =
     nrf_radio_read,
     nrf_radio_set_channel,
     nrf_radio_fast_send,
-    nrf_radio_capture_sfd_time,
     /* detected_energy, */
     //nrf_radio_cca,
     //nrf_radio_receiving_packet,
@@ -110,14 +111,7 @@ nrf_radio_init(void)
     nrf_radio_set_channel(40UL);	// Frequency bin 40, 2440MHz
     NRF_RADIO->MODE = (RADIO_MODE_MODE_Nrf_2Mbit << RADIO_MODE_MODE_Pos);
 
-    /* Radio address config */
-    //NRF_RADIO->PREFIX0 = 0xC4C3C2E7UL;  // Prefix byte of addresses 3 to 0
-    //NRF_RADIO->PREFIX1 = 0xC5C6C7C8UL;  // Prefix byte of addresses 7 to 4
-    //NRF_RADIO->BASE0   = 0xE7E7E7E7UL;  // Base address for prefix 0
-    //NRF_RADIO->BASE1   = 0x00C2C2C2UL;  // Base address for prefix 1-7
-
-    NRF_RADIO->BASE0 = 0x42;
-    NRF_RADIO->PREFIX0 = RADIO_PREFIX0_AP0_Msk; //0x42;
+    NRF_RADIO->BASE0 = 0x42424242;
 
     NRF_RADIO->TXADDRESS = 0x00UL;      // Set device address 0 to use when transmitting
     NRF_RADIO->RXADDRESSES = 0x01UL;    // Enable device address 0 to use which receiving
@@ -153,11 +147,18 @@ nrf_radio_init(void)
 			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
 #endif
 
+#if RADIO_INTERRUPT_ENABLED
+    NRF_RADIO->INTENSET = RADIO_INTENSET_ADDRESS_Msk;
+    NVIC_SetPriority(RADIO_IRQn, 10);
+    NVIC_ClearPendingIRQ(RADIO_IRQn);
+    NVIC_EnableIRQ(RADIO_IRQn);
+#endif
+
     // PPI address -> timer0 enable
-    NRF_PPI->CHEN = (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
+    //NRF_PPI->CHEN = (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
 
     /* Set the packet pointer */
-    NRF_RADIO->PACKETPTR = (uint32_t)packet_ptr;
+    //NRF_RADIO->PACKETPTR = (uint32_t)packet_ptr;
 
     RELEASE_LOCK();
 
@@ -184,8 +185,11 @@ nrf_radio_prepare(const void *payload, unsigned short payload_len)
 int
 nrf_radio_transmit(unsigned short transmit_len)
 {
-
+  if(locked) {
+    return 0;
+  }
   GET_LOCK();
+
   NRF_RADIO->TASKS_TXEN = 1;	/* With shortcuts enabled, this is the only command needed */
 
   NRF_RADIO->EVENTS_END = 0U;  		/* Make sure the radio has finished transmitting */
@@ -215,7 +219,6 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCOk)
   {
       PRINTF("PACKET RECEIVED\n\r");
-      //memcpy(buf, packet_ptr, buf_len);		/* Place the contents in the read buffer */
 
       /* Switch the packet pointer to the payload */
       NRF_RADIO->PACKETPTR = (uint32_t)buf;
@@ -285,30 +288,44 @@ nrf_radio_fast_send(void)
   GET_LOCK();
 
 
-#if RADIO_SHORTS_ENABLED
-
-  if(NRF_RADIO->STATE == RADIO_STATE_STATE_TxIdle)
+  if( !RADIO_SHORTS_ENABLED)
+  {
+    if(NRF_RADIO->STATE == RADIO_STATE_STATE_TxIdle)
     {
-      NRF_RADIO->TASKS_START;
-      PRINTF("Packet fast send finished\n\r");
-      return 1;
+    NRF_RADIO->TASKS_START;
+    PRINTF("Packet fast send finished\n\r");
+    return 1;
     }
-
-#endif
+  }
 
   PRINTF("Packet fast send failed\n\r");
   return 0;
 }
 /*---------------------------------------------------------------------------*/
-int
-nrf_radio_capture_sfd_time(void)
+rtimer_clock_t
+nrf_radio_read_sfd_timer(void)
 {
-  /* TODO: does this work properly? */
-  NRF_TIMER0->TASKS_CAPTURE[0] = 1;
-  uint32_t time = NRF_TIMER0->CC[0];
+  //last_packet_timestamp = RTIMER_NOW();
 
-  // Maybe clear register and reset the timer here?
-  return time;
+  return last_packet_timestamp;
+}
+/*---------------------------------------------------------------------------*/
+void
+RADIO_IRQHandler(void)
+{
+  if (NRF_RADIO->EVENTS_ADDRESS == 1)
+    {
+      //PRINTF("INTERRUPTED! \n\r");
+
+      if (NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
+	{
+	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
+	  last_packet_timestamp = RTIMER_NOW();
+	  //last_packet_timestamp = nrf_radio_read_sfd_timer();
+	}
+
+      NRF_RADIO->INTENCLR = RADIO_INTENCLR_ADDRESS_Enabled << RADIO_INTENCLR_ADDRESS_Pos;
+    }
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(nrf_radio_process, ev, data)
