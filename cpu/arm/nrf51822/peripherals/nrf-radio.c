@@ -25,6 +25,7 @@
 #define NRF51_RADIO_MAX_PACKET_LEN 4 		/* TODO: find max value */
 
 #define RADIO_SHORTS_ENABLED 1
+#define RADIO_BCC_ENABLED 1
 #define RADIO_INTERRUPT_ENABLED 1
 
 /*---------------------------------------------------------------------------*/
@@ -50,6 +51,9 @@ rtimer_clock_t nrf_radio_read_sfd_timer(void);
 
 /* SFD timestamp in RTIMER ticks */
 static volatile uint32_t last_packet_timestamp = 0;
+
+static volatile uint32_t ref_time = 0;
+static volatile uint32_t time = 0;
 
 //static uint8_t packet_ptr[4];  /* Pointer for receiving and transmitting */
 
@@ -144,8 +148,19 @@ nrf_radio_init(void)
     /* Config Shortcuts like in page 86 and 88 of nRF series ref man */
 #if RADIO_SHORTS_ENABLED
     NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
-			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
+    			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
+
+    #if RADIO_BCC_ENABLED
+	NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
+			    (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos) |
+			    (RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos);
+	NRF_RADIO->BCC = 24;
+	NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
+
+  #endif
 #endif
+
+
 
 #if RADIO_INTERRUPT_ENABLED
     NRF_RADIO->INTENSET = RADIO_INTENSET_ADDRESS_Msk;
@@ -154,8 +169,13 @@ nrf_radio_init(void)
     NVIC_EnableIRQ(RADIO_IRQn);
 #endif
 
-    // PPI address -> timer0 enable
-    //NRF_PPI->CHEN = (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
+    /* Configure PPI channel 0 to start BC task */
+    NRF_PPI->CH[0].EEP = (uint32_t)&NRF_RADIO->EVENTS_BCMATCH;
+    NRF_PPI->CH[0].TEP = (uint32_t)&NRF_TIMER0->TASKS_CAPTURE[3];;
+
+    /* Enable PPI channel 0 (BCcounter) and channel 26 (timestamp address event) */
+    NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
+		    (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
 
     /* Set the packet pointer */
     //NRF_RADIO->PACKETPTR = (uint32_t)packet_ptr;
@@ -314,17 +334,32 @@ void
 RADIO_IRQHandler(void)
 {
   if (NRF_RADIO->EVENTS_ADDRESS == 1)
+      {
+	/* Clear the interrupt register */
+	NRF_RADIO->INTENCLR = RADIO_INTENCLR_ADDRESS_Clear << RADIO_INTENCLR_ADDRESS_Pos;
+
+        if (NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
+  	{
+  	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
+  	}
+      }
+
+  if (NRF_RADIO->EVENTS_BCMATCH == 1)
     {
-      //PRINTF("INTERRUPTED! \n\r");
+      /* Clear the interrupt register */
+      NRF_RADIO->INTENCLR = RADIO_INTENCLR_BCMATCH_Clear << RADIO_INTENCLR_BCMATCH_Pos;
 
-      if (NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
-	{
-	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
-	  last_packet_timestamp = RTIMER_NOW();
-	  //last_packet_timestamp = nrf_radio_read_sfd_timer();
-	}
+      /* Read out the capture registers of the Address event and the BCMatch event*/
+      time = NRF_TIMER0->CC[3];
+      ref_time = NRF_TIMER0->CC[1];
 
-      NRF_RADIO->INTENCLR = RADIO_INTENCLR_ADDRESS_Enabled << RADIO_INTENCLR_ADDRESS_Pos;
+      /* Disable the Bit counter, it will be restarted by the shortcut
+       * between Address event and the BCStart task.
+       */
+      NRF_RADIO->TASKS_BCSTOP;
+
+      PRINTF("BC MATCH!\n\r");
+      PRINTF("----- Measured timer ticks: %d\t%d\t%d -----\n\r", time, ref_time, (time - ref_time));
     }
 }
 /*---------------------------------------------------------------------------*/

@@ -17,7 +17,7 @@
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
 static uint8_t blinks;
-static uint8_t txbuffer[4];  ///< Packet to transmit
+static uint8_t txbuffer[32];  ///< Packet to transmit
 rtimer_clock_t rtimer_ref_time;
 static int count;
 
@@ -37,6 +37,9 @@ PROCESS_THREAD(tx_process, ev, data)
       etimer_set(&et_tx, CLOCK_SECOND);
 
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
+
+      NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
+      //memcpy(txbuffer, &count, sizeof(count));
       txbuffer[0] = count;
       nrf_radio_send(txbuffer, 4);
       rtimer_ref_time = RTIMER_NOW();
@@ -44,6 +47,7 @@ PROCESS_THREAD(tx_process, ev, data)
       printf("PPI enabled address timestamp: %u\n\r", NRF_TIMER0->CC[1]);
       printf("RTimer time: %d \n\r", rtimer_ref_time);
       count++;
+
   }
 
   PROCESS_END();

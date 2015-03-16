@@ -1,6 +1,6 @@
 TARGET = Core51822
 
-CONTIKI_PROJECT = pingpong
+CONTIKI_PROJECT = tx-hello
 
 all: $(CONTIKI_PROJECT) 
 
