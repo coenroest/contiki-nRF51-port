@@ -19,7 +19,6 @@ int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
 
-rtimer_clock_t nrf_radio_read_sfd_timer(void);
 void RADIO_IRQHandler(void);
 
 

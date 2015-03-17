@@ -70,6 +70,8 @@ leds_arch_set(uint8_t leds){
 	nrf_gpio_pin_write(LEDS_CONF_GREEN,(leds & LEDS_GREEN));
 	nrf_gpio_pin_write(LEDS_CONF_BLUE,(leds & LEDS_BLUE));
 	nrf_gpio_pin_write(LEDS_CONF_RED,(leds & LEDS_RED));
+	nrf_gpio_pin_write(LEDS_CONF_YELLOW,(leds & LEDS_BLUE));
+	nrf_gpio_pin_write(LEDS_CONF_CYAN,(leds & LEDS_RED));
 }
 
 /**

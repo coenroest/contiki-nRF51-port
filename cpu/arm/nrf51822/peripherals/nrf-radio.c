@@ -47,11 +47,6 @@ int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
 
-rtimer_clock_t nrf_radio_read_sfd_timer(void);
-
-/* SFD timestamp in RTIMER ticks */
-static volatile uint32_t last_packet_timestamp = 0;
-
 static volatile uint32_t ref_time = 0;
 static volatile uint32_t time = 0;
 
@@ -169,9 +164,10 @@ nrf_radio_init(void)
     NVIC_EnableIRQ(RADIO_IRQn);
 #endif
 
+
     /* Configure PPI channel 0 to start BC task */
     NRF_PPI->CH[0].EEP = (uint32_t)&NRF_RADIO->EVENTS_BCMATCH;
-    NRF_PPI->CH[0].TEP = (uint32_t)&NRF_TIMER0->TASKS_CAPTURE[3];;
+    NRF_PPI->CH[0].TEP = (uint32_t)&NRF_TIMER0->TASKS_CAPTURE[3];
 
     /* Enable PPI channel 0 (BCcounter) and channel 26 (timestamp address event) */
     NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
@@ -308,7 +304,7 @@ nrf_radio_fast_send(void)
   GET_LOCK();
 
 
-  if( !RADIO_SHORTS_ENABLED)
+  if(!RADIO_SHORTS_ENABLED)
   {
     if(NRF_RADIO->STATE == RADIO_STATE_STATE_TxIdle)
     {
@@ -320,14 +316,6 @@ nrf_radio_fast_send(void)
 
   PRINTF("Packet fast send failed\n\r");
   return 0;
-}
-/*---------------------------------------------------------------------------*/
-rtimer_clock_t
-nrf_radio_read_sfd_timer(void)
-{
-  //last_packet_timestamp = RTIMER_NOW();
-
-  return last_packet_timestamp;
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -360,6 +348,7 @@ RADIO_IRQHandler(void)
 
       PRINTF("BC MATCH!\n\r");
       PRINTF("----- Measured timer ticks: %d\t%d\t%d -----\n\r", time, ref_time, (time - ref_time));
+      PRINTF("<<<< RTIMER: %u >>>>\n\r", RTIMER_NOW());
     }
 }
 /*---------------------------------------------------------------------------*/

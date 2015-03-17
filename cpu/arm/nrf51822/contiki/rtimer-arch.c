@@ -24,25 +24,28 @@ static bool rtimer_scheduled = false;
  *			and initializes the compare 0 interrupt.
  */
 void rtimer_arch_init(void){
-	/* Check if the HF clock is running*/
-	if((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_STATE_Msk) == 0){
-		hfclk_xtal_init();
-	}
-	/* Clear the task to make sure the timer is stopped */
-	NRF_TIMER1->TASKS_CLEAR    = 1;
-	/* Set the timer in Timer Mode */
-	NRF_TIMER1->MODE           = TIMER_MODE_MODE_Timer;
-	/* Prescaler 0 produces 16MHz timer tick frequency */
-	NRF_TIMER1->PRESCALER      = TIMER_PRESCALER;
-	/* 8 bit mode */
-	NRF_TIMER1->BITMODE        = TIMER_BITSIZE;
+    /* Check if the HF clock is running*/
+    if((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_STATE_Msk) == 0){
+	    hfclk_xtal_init();
+    }
+    /* Clear the task to make sure the timer is stopped */
+    NRF_TIMER1->TASKS_CLEAR    = 1;
+    /* Set the timer in Timer Mode */
+    NRF_TIMER1->MODE           = TIMER_MODE_MODE_Timer;
+    /* Prescaler 0 produces 16MHz timer tick frequency */
+    NRF_TIMER1->PRESCALER      = TIMER_PRESCALER;
+    /* 8 bit mode */
+    NRF_TIMER1->BITMODE        = TIMER_BITMODE_BITMODE_16Bit;	//TIMER_BITSIZE;
     /* Enable the Compare event on 0th channel */
     NRF_TIMER1->EVENTS_COMPARE[0]  = 0;
-    /* The */
-    NRF_TIMER1->CC[0]          = 128;
+    /* Not needed in the current implementation */
+    NRF_TIMER1->CC[0]          = 1024;
 
     // Enable overflow event and overflow interrupt:
     NRF_TIMER1->INTENSET      = TIMER_INTENSET_COMPARE0_Msk;
+
+    // Enable shorts for auto-reset
+    NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk;
 
     NVIC_SetPriority(TIMER1_IRQn, TIMER1_IRQ_PRI);
     NVIC_EnableIRQ(TIMER1_IRQn);    // Enable Interrupt for TIMER1 in the core.
@@ -67,6 +70,11 @@ void rtimer_arch_schedule(rtimer_clock_t t){
  *
  */
 rtimer_clock_t rtimer_arch_now(void){
+	/* This should be the current counter/timer value!
+	 *
+	 * Use something like capture here and read that value out.
+	 * */
+
 	return rtimer_count;
 }
 
@@ -81,13 +89,17 @@ rtimer_clock_t rtimer_arch_now(void){
  */
 void
 TIMER1_IRQHandler(){
-    NRF_TIMER1->EVENTS_COMPARE[0]  = 0;
-    rtimer_count++;
-    if(rtimer_scheduled){
-    	if(rtimer_count >= rtimer_next_schedule){
-    		rtimer_scheduled = false;
-    	    rtimer_run_next();
-    	}
+
+  if (NRF_TIMER1->EVENTS_COMPARE[0] == 1)
+    {
+      NRF_TIMER1->EVENTS_COMPARE[0] = 0;
+      rtimer_count++;
+      if(rtimer_scheduled){
+	  if(rtimer_count >= rtimer_next_schedule){
+		  rtimer_scheduled = false;
+	      rtimer_run_next();
+	  }
+      }
     }
 }
 /**
