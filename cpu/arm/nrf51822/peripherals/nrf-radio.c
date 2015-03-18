@@ -41,10 +41,13 @@ int nrf_radio_set_channel(int channel);
 
 int nrf_radio_fast_send(void);
 
+rtimer_clock_t nrf_radio_read_address_timestamp(void);
+
 static volatile uint32_t ref_time = 0;
 static volatile uint32_t time = 0;
 
-//static uint8_t packet_ptr[4];  /* Pointer for receiving and transmitting */
+/* Address timestamp in RTIMER ticks */
+static volatile uint32_t last_packet_timestamp = 0;
 
 const struct radio_driver nrf_radio_driver =
 {
@@ -59,6 +62,7 @@ const struct radio_driver nrf_radio_driver =
     //nrf_radio_cca,
     //nrf_radio_receiving_packet,
     //nrf_radio_pending_packet,
+    nrf_radio_read_address_timestamp,
     nrf_radio_on,
     nrf_radio_off,
 };
@@ -102,7 +106,7 @@ nrf_radio_init(void)
     /* Radio config */
     NRF_RADIO->TXPOWER = (RADIO_TXPOWER_TXPOWER_Pos4dBm << RADIO_TXPOWER_TXPOWER_Pos);
     nrf_radio_set_channel(40UL);	// Frequency bin 40, 2440MHz
-    NRF_RADIO->MODE = (RADIO_MODE_MODE_Nrf_2Mbit << RADIO_MODE_MODE_Pos);
+    NRF_RADIO->MODE = (RADIO_MODE_MODE_Ble_1Mbit << RADIO_MODE_MODE_Pos);
 
     NRF_RADIO->BASE0 = 0x42424242;
 
@@ -302,6 +306,16 @@ nrf_radio_fast_send(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
+rtimer_clock_t
+nrf_radio_read_address_timestamp(void)
+{
+  /* Read the last address timestamp from the TIMER0 capture register */
+
+  last_packet_timestamp = NRF_TIMER0->CC[TIMESTAMP_REG];
+
+  return last_packet_timestamp;
+}
+/*---------------------------------------------------------------------------*/
 void
 RADIO_IRQHandler(void)
 {
@@ -321,6 +335,9 @@ RADIO_IRQHandler(void)
       /* Clear the interrupt register */
       NRF_RADIO->INTENCLR = RADIO_INTENCLR_BCMATCH_Clear << RADIO_INTENCLR_BCMATCH_Pos;
 
+      /* Clear the event register */
+      NRF_RADIO->EVENTS_BCMATCH = 0;
+
       /* Read out the capture registers of the Address event and the BCMatch event*/
       time = NRF_TIMER0->CC[BCC_REG];
       ref_time = NRF_TIMER0->CC[TIMESTAMP_REG];
@@ -329,6 +346,9 @@ RADIO_IRQHandler(void)
        * between Address event and the BCStart task.
        */
       NRF_RADIO->TASKS_BCSTOP;
+
+      /* Re-enable the interrupt */
+      NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
 
       PRINTF("BC MATCH! \t\t Measured timer ticks: %u -----\n\r", (time - ref_time));
     }
