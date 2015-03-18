@@ -57,12 +57,8 @@ PROCESS_THREAD(tx_process, ev, data)
 
       printf("--- The time is: %u\n\r", after_blink-rtimer_ref_time);*/
 
-
       printf("----> BEFORE SCHED: %u\n\r", RTIMER_NOW());
       rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
-      //rtimer_set(&rt, RTIMER_NOW()+(2*RTIMER_ARCH_SECOND),1,send,NULL);
-
-
   }
 
   PROCESS_END();
@@ -79,10 +75,9 @@ PROCESS_THREAD(blink_process, ev, data)
 
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-    leds_off(LEDS_ALL);
+    /*leds_off(LEDS_ALL);
     leds_on(blinks & LEDS_ALL);
-    blinks++;
-    //printf("Blink... (state %c)\n", leds_get());
+    blinks++;*/
   }
 
   PROCESS_END();

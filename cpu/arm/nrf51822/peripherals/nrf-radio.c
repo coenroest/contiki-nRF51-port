@@ -22,13 +22,6 @@
 #define PRINTF(...) do {} while (0)
 #endif
 
-//#define NRF51_RADIO_MAX_PACKET_LEN 4 		/* TODO: find max value */
-
-/** Macros for enabling shortcuts, interrupts and bit-counting */
-#define RADIO_SHORTS_ENABLED 1
-#define RADIO_BCC_ENABLED 1
-#define RADIO_INTERRUPT_ENABLED 1
-
 /*---------------------------------------------------------------------------*/
 PROCESS(nrf_radio_process, "nRF Radio driver");
 /*---------------------------------------------------------------------------*/
@@ -163,22 +156,6 @@ nrf_radio_init(void)
     NVIC_EnableIRQ (RADIO_IRQn);
 #endif
 
-#if RADIO_SHORTS_ENABLED
-    /* Enable PPI channel 0 (BCcounter) and channel 26 (timestamp address event) */
-    NRF_PPI->CHEN = (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
-#endif
-
-#if RADIO_BCC_ENABLED
-    /* Configure PPI channel 0 to start BC task */
-    NRF_PPI->CH[0].EEP = (uint32_t) &NRF_RADIO->EVENTS_BCMATCH;
-    NRF_PPI->CH[0].TEP = (uint32_t) &NRF_TIMER0->TASKS_CAPTURE[BCC_REG];
-
-    /* Enable PPI channel 0 (BCcounter) and channel 26 (timestamp address event) */
-    NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
-		    (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
-#endif
-
-
     RELEASE_LOCK();
 
     process_start(&nrf_radio_process, NULL);
@@ -230,6 +207,9 @@ nrf_radio_send(const void *payload, unsigned short payload_len)
 int
 nrf_radio_read(void *buf, unsigned short buf_len)
 {
+  if(locked) {
+    return 0;
+  }
   GET_LOCK();
   int ret = 0;
 
@@ -312,11 +292,13 @@ nrf_radio_fast_send(void)
     {
     NRF_RADIO->TASKS_START;
     PRINTF("Packet fast send finished\n\r");
+    RELEASE_LOCK();
     return 1;
     }
   }
 
   PRINTF("Packet fast send failed\n\r");
+  RELEASE_LOCK();
   return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -348,9 +330,7 @@ RADIO_IRQHandler(void)
        */
       NRF_RADIO->TASKS_BCSTOP;
 
-      PRINTF("BC MATCH!\n\r");
-      PRINTF("----- Measured timer ticks: %d\t%d\t%d -----\n\r", time, ref_time, (time - ref_time));
-      PRINTF("<<<< RTIMER: %u >>>>\n\r", RTIMER_NOW());
+      PRINTF("BC MATCH! \t\t Measured timer ticks: %u -----\n\r", (time - ref_time));
     }
 }
 /*---------------------------------------------------------------------------*/

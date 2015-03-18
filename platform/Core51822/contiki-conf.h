@@ -19,6 +19,11 @@
 #include "stdbool.h"
 #include "nrf.h"
 
+/** Macros for enabling shortcuts, interrupts and bit-counting */
+#define RADIO_SHORTS_ENABLED 1
+#define RADIO_BCC_ENABLED 1
+#define RADIO_INTERRUPT_ENABLED 1
+
 //#ifndef NETSTACK_CONF_RADIO
 //#define NETSTACK_CONF_RADIO   nrf_radio_driver
 //#endif /* NETSTACK_CONF_RADIO */

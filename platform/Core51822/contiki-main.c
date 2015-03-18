@@ -2,15 +2,12 @@
  * \addtogroup platform
  * @{
  *
- * \defgroup PCA10000 PCA10000: The USB dongle platform for the nrf51822 MCU
+ * \defgroup Core51822 Core51822: The Waveshare platform for the nrf51822 MCU
  *
- * PCA10000 is a USB dongle as a part of the nrf51822 MCU's evaluation and development kit.
- * nrf51822 is a ARM Cortex M0 based MCU with BLE compatible radio. It has an inbuilt JLink-Lite
- * Cortex-M debugger/programmer.
  * @{
  * \file
- * Main file where the code execution starts for all examples based on PCA10000 platform
- *  \author prithvi
+ * Main file where the code execution starts for all examples based on Core51822 platform
+ *  \author CoenRoest
  */
 
 #include "contiki.h"
@@ -19,7 +16,7 @@
 #include "dev/leds.h"
 
 #include "nrf-radio.h"
-#include "nrf-timer.h"
+#include "nrf-init.h"
 
 /*---------------------------------------------------------------------------*/
 /**
@@ -45,11 +42,11 @@ main(void)
   process_start(&etimer_process, NULL);
   ctimer_init();
 
+  /* Configure the nRF51 inits */
+  nrf_init();
+
   /* Configure the nRF51 radio */
   nrf_radio_init();
-  /* Configure the nRF51 timer0 for timestamping */
-  //nrf_timer_init();
-
 
   autostart_start(autostart_processes);
 
