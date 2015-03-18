@@ -4,10 +4,10 @@
  *
  * \file
  * Platform specific configurations for Core51822.
- * PCA10000's platform specific definitions required for Contiki
+ * Core51822's platform specific definitions required for Contiki
  * The parameters defined are Clock and RTIMER's frequency, UART baud rate,
  * Low frequency clock source and typedef related to clock, rtimer and uip stats.
- *  \author prithvi
+ *  \author CoenRoest
  */
 
 #ifndef CONTIKI_CONF_H_
@@ -25,6 +25,12 @@
 /*---------------------------------------------------------------------------*/
 /** Specify the UART baud rate */
 #define UART_BAUDRATE UART_BAUDRATE_BAUDRATE_Baud38400
+
+/** Defines for the capture/compare registers */
+#define SCHEDULE_REG 	0
+#define TIMESTAMP_REG 	1
+#define NOW_REG		2
+#define BCC_REG		3
 
 /** \name Compiler configurations.
  * CCIF and CLIF are defined but used only in Windows based platforms
@@ -58,10 +64,15 @@ typedef uint32_t rtimer_clock_t;
 /** The Rtimer's TIMER tick freq is HF freq divided by two to power of value defined here*/
 #define TIMER_PRESCALER 	0
 /** \brief Number of bits used for the Rtimer's TIMER */
-#define TIMER_BITSIZE TIMER_BITMODE_BITMODE_08Bit
+#define TIMER_BITSIZE TIMER_BITMODE_BITMODE_32Bit
+
 #if TIMER_BITSIZE == TIMER_BITMODE_BITMODE_08Bit
 /** Since the Rtimer is 8 bit the CC interrupt occurs every 2^8 ticks of the TIMER */
 #define TIMER_COMPARE_FREQ	256
+#endif
+#if TIMER_BITSIZE == TIMER_BITMODE_BITMODE_32Bit
+/** Since the Rtimer is 8 bit the CC interrupt occurs every 2^8 ticks of the TIMER */
+#define TIMER_COMPARE_FREQ	1
 #endif
 
 /** HF Clock frequency in Hertz, constant.

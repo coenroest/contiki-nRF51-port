@@ -48,7 +48,7 @@ main(void)
   /* Configure the nRF51 radio */
   nrf_radio_init();
   /* Configure the nRF51 timer0 for timestamping */
-  nrf_timer_init();
+  //nrf_timer_init();
 
 
   autostart_start(autostart_processes);

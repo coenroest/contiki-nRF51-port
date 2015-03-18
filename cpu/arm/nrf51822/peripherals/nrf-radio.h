@@ -1,3 +1,14 @@
+/**
+ * \addtogroup nrf51822
+ * @{
+ * \defgroup nrf51-radio-driver Contiki radio driver implementation for nrf51822 SoC
+ * 			This module contains the radio driver implementation for nrf51822 SoC
+ *
+ * @{
+ * \file
+ * nrf51822 architecture specific declarations for the nRF51 radio
+ * \author CoenRoest
+ */
 #ifndef NRF_RADIO_H_
 #define NRF_RADIO_H_
 

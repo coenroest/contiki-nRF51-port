@@ -4,103 +4,114 @@
  * \file
  * nrf51822 architecture specific implementation for Contiki's Rtimer
  *  \author prithvi
+ *  \author CoenRoest
  */
 
 #include "rtimer-arch.h"
 #include "clock-nrf.h"
 #include "sys/rtimer.h"
 
-/** Variable to store the count of the Rtimer */
-static volatile rtimer_clock_t rtimer_count = 0;
-/** Variable to store the time at which the next Rtimer task needs to be executed */
-static volatile rtimer_clock_t rtimer_next_schedule = 0;
 /** Boolean value to store if a Rtimer task has been scheduled */
 static bool rtimer_scheduled = false;
 
-/** \brief Initialize the RTIMER using TIMER1.
- *			This function makes sure the high frequency clock is running,
- *			initializes TIMER1 based on the parameters defined in
- *			\ref nrf-rtimer-definitions "Macros for RTIMER using nrf51822"
- *			and initializes the compare 0 interrupt.
+/** \brief Initialize the RTIMER using TIMER0.
+* This function makes sure the high frequency clock is running,
+* initializes TIMER0 based on the parameters defined in
+* \ref nrf-rtimer-definitions "Macros for RTIMER using nrf51822"
+* and initializes the compare 0 interrupt.
  */
-void rtimer_arch_init(void){
-    /* Check if the HF clock is running*/
-    if((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_STATE_Msk) == 0){
-	    hfclk_xtal_init();
+void
+rtimer_arch_init (void)
+{
+  /* Check if the HF clock is running*/
+  if ((NRF_CLOCK->HFCLKSTAT & CLOCK_HFCLKSTAT_STATE_Msk) == 0)
+    {
+      hfclk_xtal_init ();
     }
-    /* Clear the task to make sure the timer is stopped */
-    NRF_TIMER1->TASKS_CLEAR    = 1;
-    /* Set the timer in Timer Mode */
-    NRF_TIMER1->MODE           = TIMER_MODE_MODE_Timer;
-    /* Prescaler 0 produces 16MHz timer tick frequency */
-    NRF_TIMER1->PRESCALER      = TIMER_PRESCALER;
-    /* 8 bit mode */
-    NRF_TIMER1->BITMODE        = TIMER_BITMODE_BITMODE_16Bit;	//TIMER_BITSIZE;
-    /* Enable the Compare event on 0th channel */
-    NRF_TIMER1->EVENTS_COMPARE[0]  = 0;
-    /* Not needed in the current implementation */
-    NRF_TIMER1->CC[0]          = 1024;
 
-    // Enable overflow event and overflow interrupt:
-    NRF_TIMER1->INTENSET      = TIMER_INTENSET_COMPARE0_Msk;
+  /* Clear the task to make sure the timer is stopped */
+  NRF_TIMER0->TASKS_CLEAR = 1;
+  /* Set the timer in Timer Mode */
+  NRF_TIMER0->MODE = TIMER_MODE_MODE_Timer;
+  /* Prescaler 0 produces 16MHz timer tick frequency */
+  NRF_TIMER0->PRESCALER = TIMER_PRESCALER;
+  /* 32 bit mode */
+  NRF_TIMER0->BITMODE = TIMER_BITSIZE;
+  /* Enable the Compare event on 0th channel */
+  NRF_TIMER0->EVENTS_COMPARE[0] = 0;
 
-    // Enable shorts for auto-reset
-    NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk;
+  /* Enable overflow event and overflow interrupt */
+  NRF_TIMER0->INTENSET = TIMER_INTENSET_COMPARE0_Msk;
 
-    NVIC_SetPriority(TIMER1_IRQn, TIMER1_IRQ_PRI);
-    NVIC_EnableIRQ(TIMER1_IRQn);    // Enable Interrupt for TIMER1 in the core.
+  /* Enable shorts for auto-reset
+   *
+   * This messes with the timestamping and RTIMER_NOW()
+   * Maybe not particulary needed right now.
+   *
+   * */
+  //NRF_TIMER0->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk;
 
-    NRF_TIMER1->TASKS_START   = 1;                    		// Start timer.
+  NVIC_SetPriority (TIMER0_IRQn, TIMER0_IRQ_PRI);
+
+  /* Start the timer */
+  NRF_TIMER0->TASKS_START = 1;
 }
 
 /** Schedule the next Rtimer task
+ * \brief Places the scheduled time in a compare register
+ * and enables the interrupt handler.
  *
  * \param t time at which next Rtimer task should be executed
  */
-void rtimer_arch_schedule(rtimer_clock_t t){
-	rtimer_next_schedule = t;
-	rtimer_scheduled = true;
+void
+rtimer_arch_schedule (rtimer_clock_t t)
+{
+  /* Put the scheduled time in a compare register */
+  NRF_TIMER0->CC[SCHEDULE_REG] = t;
+
+  /* Enable the interrupt handler */
+  NVIC_EnableIRQ (TIMER0_IRQn);
+
+  /* Set the scheduled flag */
+  rtimer_scheduled = true;
 }
 
 /**
- * \brief      Get the current clock time
- * \return     This function returns what the real-time module thinks
- *             is the current time. The current time is used to set
- *             the timeouts for real-time tasks.
- *
+ * \brief      Get the current clock time \n
+ * 		This function calls the nRF51 capture task to put the current
+ * 		counter value in a register.
+ * \return     This function returns what is in the capture register.
  */
-rtimer_clock_t rtimer_arch_now(void){
-	/* This should be the current counter/timer value!
-	 *
-	 * Use something like capture here and read that value out.
-	 * */
-
-	return rtimer_count;
+rtimer_clock_t
+rtimer_arch_now (void)
+{
+  NRF_TIMER0->TASKS_CAPTURE[NOW_REG] = 1;
+  return NRF_TIMER0->CC[NOW_REG];
 }
 
 /** \brief Function for handling the TIMER1 interrupt.
- * TIMER1 interrupt is triggered on COMPARE[0]. Since the TIMER
- * does not restart upon successful comparison, the TIMER gets an
- * interrupt every 256 ticks when a 8 bit timer is used irrespective
- * of the compare value used. \n In this interrupt routine the rtimer
- * count is incremented. If a rtimer task is scheduled and the rtimer
- * count has reached the next scheduled value then the rtimer's next
- * run function is called.
+ * TIMER1 interrupt is triggered on COMPARE[0]. \n
+ * In this interrupt routine the rtimer count is incremented.
+ * If an rtimer task is scheduled then the interrupt is disabled and
+ * rtimer's next run function is called.
  */
 void
-TIMER1_IRQHandler(){
-
-  if (NRF_TIMER1->EVENTS_COMPARE[0] == 1)
+TIMER0_IRQHandler ()
+{
+  /* Check if this is a compare event and not an overflow */
+  if (NRF_TIMER0->EVENTS_COMPARE[0] == 1)
     {
-      NRF_TIMER1->EVENTS_COMPARE[0] = 0;
-      rtimer_count++;
-      if(rtimer_scheduled){
-	  if(rtimer_count >= rtimer_next_schedule){
-		  rtimer_scheduled = false;
-	      rtimer_run_next();
-	  }
-      }
-    }
+      /* Reset the compare event */
+      NRF_TIMER0->EVENTS_COMPARE[0] = 0;
+      if (rtimer_scheduled)
+	{
+	  NVIC_DisableIRQ (TIMER0_IRQn);
+	  rtimer_scheduled = false;
+	  rtimer_run_next ();
+	}
+    } /* else it is overflow */
+  else
+    printf("OVERFLOW\n\r");
 }
 /**
  * @}

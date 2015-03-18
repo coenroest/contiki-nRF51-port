@@ -17,7 +17,7 @@
 #include "nrf.h"
 #include "contiki-conf.h"
 
-#define TIMER1_IRQ_PRI			3
+#define TIMER0_IRQ_PRI			3
 
 void rtimer_arch_init(void);
 void rtimer_arch_schedule(rtimer_clock_t t);

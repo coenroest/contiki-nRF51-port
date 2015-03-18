@@ -1,9 +1,9 @@
 /**
+ * \addtogroup nrf51-radio-driver
+ * @{
  * \file
- *         nRF51 radio driver
- * \author
- *         Coen Roest <coen@student.chalmers.se>
- *
+ * nrf51822 radio driver
+ *  \author CoenRoest
  */
 
 #include <string.h>
@@ -22,8 +22,9 @@
 #define PRINTF(...) do {} while (0)
 #endif
 
-#define NRF51_RADIO_MAX_PACKET_LEN 4 		/* TODO: find max value */
+//#define NRF51_RADIO_MAX_PACKET_LEN 4 		/* TODO: find max value */
 
+/** Macros for enabling shortcuts, interrupts and bit-counting */
 #define RADIO_SHORTS_ENABLED 1
 #define RADIO_BCC_ENABLED 1
 #define RADIO_INTERRUPT_ENABLED 1
@@ -155,26 +156,28 @@ nrf_radio_init(void)
   #endif
 #endif
 
-
-
 #if RADIO_INTERRUPT_ENABLED
     NRF_RADIO->INTENSET = RADIO_INTENSET_ADDRESS_Msk;
-    NVIC_SetPriority(RADIO_IRQn, 10);
-    NVIC_ClearPendingIRQ(RADIO_IRQn);
-    NVIC_EnableIRQ(RADIO_IRQn);
+    NVIC_SetPriority (RADIO_IRQn, 10);
+    NVIC_ClearPendingIRQ (RADIO_IRQn);
+    NVIC_EnableIRQ (RADIO_IRQn);
 #endif
 
+#if RADIO_SHORTS_ENABLED
+    /* Enable PPI channel 0 (BCcounter) and channel 26 (timestamp address event) */
+    NRF_PPI->CHEN = (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
+#endif
 
+#if RADIO_BCC_ENABLED
     /* Configure PPI channel 0 to start BC task */
-    NRF_PPI->CH[0].EEP = (uint32_t)&NRF_RADIO->EVENTS_BCMATCH;
-    NRF_PPI->CH[0].TEP = (uint32_t)&NRF_TIMER0->TASKS_CAPTURE[3];
+    NRF_PPI->CH[0].EEP = (uint32_t) &NRF_RADIO->EVENTS_BCMATCH;
+    NRF_PPI->CH[0].TEP = (uint32_t) &NRF_TIMER0->TASKS_CAPTURE[BCC_REG];
 
     /* Enable PPI channel 0 (BCcounter) and channel 26 (timestamp address event) */
     NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
 		    (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
+#endif
 
-    /* Set the packet pointer */
-    //NRF_RADIO->PACKETPTR = (uint32_t)packet_ptr;
 
     RELEASE_LOCK();
 
@@ -254,7 +257,7 @@ int
 nrf_radio_on(void)
 {
 
-  /* Difficult since there are is no global ON state,
+  /* Not implemented yet since there are is no global ON state,
    * only commands to set the radio in TX or RX mode.
    */
 
@@ -303,7 +306,6 @@ nrf_radio_fast_send(void)
   }
   GET_LOCK();
 
-
   if(!RADIO_SHORTS_ENABLED)
   {
     if(NRF_RADIO->STATE == RADIO_STATE_STATE_TxIdle)
@@ -338,8 +340,8 @@ RADIO_IRQHandler(void)
       NRF_RADIO->INTENCLR = RADIO_INTENCLR_BCMATCH_Clear << RADIO_INTENCLR_BCMATCH_Pos;
 
       /* Read out the capture registers of the Address event and the BCMatch event*/
-      time = NRF_TIMER0->CC[3];
-      ref_time = NRF_TIMER0->CC[1];
+      time = NRF_TIMER0->CC[BCC_REG];
+      ref_time = NRF_TIMER0->CC[TIMESTAMP_REG];
 
       /* Disable the Bit counter, it will be restarted by the shortcut
        * between Address event and the BCStart task.

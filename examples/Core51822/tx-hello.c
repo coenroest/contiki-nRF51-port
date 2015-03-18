@@ -19,7 +19,7 @@ static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
 static uint8_t txbuffer[32];  ///< Packet to transmit
-rtimer_clock_t rtimer_ref_time;
+rtimer_clock_t rtimer_ref_time, after_blink;
 static int count = 0;
 
 /*---------------------------------------------------------------------------*/
@@ -29,15 +29,14 @@ AUTOSTART_PROCESSES(&tx_process, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
-  printf("SEND FUNC\n\r");
+  printf("----> AFTER SCHED: %u\n\r", RTIMER_NOW());
   NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
-  //memcpy(txbuffer, &count, sizeof(count));
+
   txbuffer[0] = count;
   nrf_radio_send(txbuffer, 4);
-  printf("Contents of packet: %d\n\r", (int)*txbuffer);
-  printf("PPI enabled address timestamp: %u\n\r", NRF_TIMER0->CC[1]);
-  printf("RTimer time: %d \n\r", RTIMER_NOW());
+  printf("Contents of packet: %d\t\t address timestamp: %u\n\r", (int)*txbuffer, NRF_TIMER0->CC[TIMESTAMP_REG]);
   count++;
+
 
 }
 /*---------------------------------------------------------------------------*/
@@ -52,8 +51,14 @@ PROCESS_THREAD(tx_process, ev, data)
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
 
+     /* rtimer_ref_time = RTIMER_NOW();
+      leds_blink();
+      after_blink = RTIMER_NOW();
 
-      printf("--- The time is: %u\n\r", RTIMER_NOW());
+      printf("--- The time is: %u\n\r", after_blink-rtimer_ref_time);*/
+
+
+      printf("----> BEFORE SCHED: %u\n\r", RTIMER_NOW());
       rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
       //rtimer_set(&rt, RTIMER_NOW()+(2*RTIMER_ARCH_SECOND),1,send,NULL);
 
