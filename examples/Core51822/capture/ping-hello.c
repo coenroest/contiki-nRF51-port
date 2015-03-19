@@ -25,7 +25,7 @@ static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
 static uint8_t txbuffer[32];  ///< Packet to transmit
-static uint8_t rxbuffer[32];  ///< Received packet
+
 rtimer_clock_t rtimer_ref_time, after_blink;
 static int count = 0;
 
@@ -48,23 +48,39 @@ PROCESS_THREAD(ping_process, ev, data)
       etimer_set (&et_tx, 5*CLOCK_SECOND);
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-      if (count < 1)
-	{
-	  txbuffer[COUNT] = count;
-	  txbuffer[SENDER] = DEVICE_ID;
-	  txbuffer[DELAY] = DELAY_TICKS;
-	  txbuffer[OPTIONAL] = 0x42;
+/*      txbuffer[COUNT] = count;
+      txbuffer[SENDER] = DEVICE_ID;
+      txbuffer[DELAY] = DELAY_TICKS;
+      txbuffer[OPTIONAL] = 0x42;
 
-	  nrf_radio_send (txbuffer, 4);
-	  printf ("PING\t TX: ----- Packet send: %u\t%u\t%u\t%02x\n\r", txbuffer[0], txbuffer[1],
-		  txbuffer[2], txbuffer[3]);
-	  printf ("PING\t TX: ----- Address timestamp: %u\n\r", NRF_TIMER0->CC[TIMESTAMP_REG]);
-	  count++;
+      printf("main-SEND\n\r");
+      NRF_RADIO->TASKS_DISABLE = 1U;  Make sure the radio has finished transmitting
+      while (NRF_RADIO->EVENTS_DISABLED == 0U)
+	{
 	}
 
-      nrf_radio_read (rxbuffer, 4);
-      printf ("PING\t RX: ----- Content of rxbuffer: %d\t%d\t%d\t%02x\n\r", rxbuffer[0], rxbuffer[1],
-      		  rxbuffer[2], rxbuffer[3]);
+      nrf_radio_send (txbuffer, 4);
+      printf ("PING\t TX: ----- Packet send: %u\t%u\t%u\t%02x\n\r", txbuffer[0],
+	      txbuffer[1], txbuffer[2], txbuffer[3]);
+      printf ("PING\t TX: ----- Address timestamp: %u\n\r",
+	      NRF_TIMER0->CC[TIMESTAMP_REG]);
+      count++;*/
+
+
+      //nrf_radio_read(rxbuffer, 8);
+      nrf_radio_on();
+      printf ("PING\t RX: ----- Packet received: %u\t%u\t%u\t%02x\n\r",
+	      rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3]);
+      printf ("PING\t RX: ----- Address timestamp: %u\n\r",
+	      NRF_TIMER0->CC[TIMESTAMP_REG]);
+
+      /*if (NRF_RADIO->STATE == RADIO_STATE_STATE_Disabled)
+	{
+	  printf ("main-RECV\n\r");
+	  //nrf_radio_on();
+
+	}
+*/
 
   }
 

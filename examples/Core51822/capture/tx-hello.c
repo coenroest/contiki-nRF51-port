@@ -15,79 +15,49 @@
 
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
-
-/* Parameters for sending a ping packet with controls */
-
-#define DEVICE_ID 1
-
-/* The fixed delay used for scheduling with the RTimer */
-#define DELAY_FIXED 1000
-
-#define COUNT 0
-#define SENDER 1
-#define DELAY 2
-#define OPTIONAL 3
-
-/*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
 static uint8_t txbuffer[32];  ///< Packet to transmit
-//static uint8_t rxbuffer[32];  ///< Received packet
 rtimer_clock_t rtimer_ref_time, after_blink;
-static int count = 100;
-int delay = 0;
+static int count = 0;
+
 /*---------------------------------------------------------------------------*/
-PROCESS(pong_process, "Pong process");
+PROCESS(tx_process, "TX process");
 PROCESS(blink_process, "LED blink process");
-AUTOSTART_PROCESSES(&pong_process, &blink_process);
+AUTOSTART_PROCESSES(&tx_process, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
-  nrf_radio_send(txbuffer, 4);
+  printf("----> AFTER SCHED: %u\n\r", RTIMER_NOW());
 
-  printf ("P0NG\t TX: ----- Packet send: %u\t%u\t%u\t%02x\n\r", txbuffer[0], txbuffer[1],
-	  txbuffer[2], txbuffer[3]);
-  printf ("P0NG\t TX: ----- Address timestamp: %u\n\r", nrf_radio_read_address_timestamp());
+  txbuffer[0] = count;
+  nrf_radio_send(txbuffer, 4);
+  printf("Contents of packet: %d\t\t address timestamp: %u\n\r", (int)*txbuffer, NRF_TIMER0->CC[TIMESTAMP_REG]);
   count++;
+
 
 }
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(pong_process, ev, data)
+PROCESS_THREAD(tx_process, ev, data)
 {
   PROCESS_BEGIN();
 
   while(1)
   {
-      etimer_set(&et_tx, CLOCK_SECOND);
+      etimer_set(&et_tx, 5*CLOCK_SECOND);
 
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-      nrf_radio_read(rxbuffer, 4);
-      printf ("P0NG\t RX: ----- Content of rxbuffer: %d\t%d\t%d\t%02x\n\r", rxbuffer[0], rxbuffer[1],
-            		  rxbuffer[2], rxbuffer[3]);
 
-      if (rxbuffer[SENDER] == 0)
-	{
-	  /* Read the desired delay value from receive buffer */
-	  delay = rxbuffer[DELAY];
+     /* rtimer_ref_time = RTIMER_NOW();
+      leds_blink();
+      after_blink = RTIMER_NOW();
 
-	  /* Make a pong packet */
-	  txbuffer[COUNT] = count;
-	  txbuffer[SENDER] = DEVICE_ID;
-	  txbuffer[OPTIONAL] = 0x24;
+      printf("--- The time is: %u\n\r", after_blink-rtimer_ref_time);*/
 
-	  if (DEVICE_ID == 1)
-	    {
-	      txbuffer[DELAY] = delay;
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+DELAY_FIXED+delay,1,send,NULL);
-	    }
-	  else
-	    {
-	      txbuffer[delay] = 0;
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+DELAY_FIXED,1,send,NULL);
-	    }
-	}
+      printf("----> BEFORE SCHED: %u\n\r", RTIMER_NOW());
+      rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
   }
 
   PROCESS_END();

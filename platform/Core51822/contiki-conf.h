@@ -21,7 +21,7 @@
 
 /** Macros for enabling shortcuts, interrupts and bit-counting */
 #define RADIO_SHORTS_ENABLED 1
-#define RADIO_BCC_ENABLED 1
+#define RADIO_BCC_ENABLED 0
 #define RADIO_INTERRUPT_ENABLED 1
 
 //#ifndef NETSTACK_CONF_RADIO

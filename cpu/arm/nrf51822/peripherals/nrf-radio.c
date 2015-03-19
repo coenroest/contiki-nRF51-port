@@ -83,6 +83,8 @@ static void RELEASE_LOCK(void) {
   }
   locked--;
 }
+
+
 /*---------------------------------------------------------------------------*/
 #define PACKET0_S1_SIZE                  (0UL)  //!< S1 size in bits
 #define PACKET0_S0_SIZE                  (0UL)  //!< S0 size in bits
@@ -154,10 +156,12 @@ nrf_radio_init(void)
 #endif
 
 #if RADIO_INTERRUPT_ENABLED
-    NRF_RADIO->INTENSET = RADIO_INTENSET_ADDRESS_Msk;
+    //NRF_RADIO->INTENSET |= RADIO_INTENSET_ADDRESS_Msk;
+    NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
     NVIC_SetPriority (RADIO_IRQn, 10);
     NVIC_ClearPendingIRQ (RADIO_IRQn);
     NVIC_EnableIRQ (RADIO_IRQn);
+
 #endif
 
     RELEASE_LOCK();
@@ -192,10 +196,10 @@ nrf_radio_transmit(unsigned short transmit_len)
 
   NRF_RADIO->TASKS_TXEN = 1;	/* With shortcuts enabled, this is the only command needed */
 
-  NRF_RADIO->EVENTS_END = 0U;  		/* Make sure the radio has finished transmitting */
+/*  NRF_RADIO->EVENTS_END = 0U;  		 Make sure the radio has finished transmitting
   while(NRF_RADIO->EVENTS_END == 0U)
   {
-  }
+  }*/
   RELEASE_LOCK();
   PRINTF("PACKET SEND\n\r");
   return 1;
@@ -217,7 +221,11 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   GET_LOCK();
   int ret = 0;
 
-  NRF_RADIO->TASKS_RXEN = 1U; /* With shortcuts enabled, this is the only command needed */
+  //NRF_RADIO->TASKS_RXEN = 1U; /* With shortcuts enabled, this is the only command needed */
+
+/*  while(NRF_RADIO->EVENTS_END == 0U)
+  {
+  }*/
 
   if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCOk)
   {
@@ -225,6 +233,7 @@ nrf_radio_read(void *buf, unsigned short buf_len)
 
       /* Switch the packet pointer to the payload */
       NRF_RADIO->PACKETPTR = (uint32_t)buf;
+      //memcpy(buf, NRF_RADIO->PACKETPTR, buf_len);
       ret = sizeof(buf);			/* Fix me: find actual size of packet */
   }
 
@@ -232,7 +241,10 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   {
       PRINTF("PACKET RECEIVE FAILED\n\r");
   }
-
+/*  NRF_RADIO->EVENTS_END = 0U;  Make sure the radio has finished receiving
+  while (NRF_RADIO->EVENTS_END == 0U)
+    {
+    }*/
   RELEASE_LOCK();
   return ret;
 }
@@ -240,11 +252,14 @@ nrf_radio_read(void *buf, unsigned short buf_len)
 int
 nrf_radio_on(void)
 {
+  if(locked) {
+      return 0;
+    }
+    GET_LOCK();
+    int ret = 0;
+  NRF_RADIO->TASKS_RXEN = 1U;
 
-  /* Not implemented yet since there are is no global ON state,
-   * only commands to set the radio in TX or RX mode.
-   */
-
+  RELEASE_LOCK();
   return 1;
 }
 /*---------------------------------------------------------------------------*/
@@ -319,39 +334,74 @@ nrf_radio_read_address_timestamp(void)
 void
 RADIO_IRQHandler(void)
 {
-  if (NRF_RADIO->EVENTS_ADDRESS == 1)
-      {
-	/* Clear the interrupt register */
-	NRF_RADIO->INTENCLR = RADIO_INTENCLR_ADDRESS_Clear << RADIO_INTENCLR_ADDRESS_Pos;
+/*  if (NRF_RADIO->EVENTS_ADDRESS == 1)
+    {
+      NRF_RADIO->EVENTS_ADDRESS = 0;
+       Clear the interrupt register
+      NRF_RADIO->INTENCLR = RADIO_INTENCLR_ADDRESS_Clear
+	  << RADIO_INTENCLR_ADDRESS_Pos;
+      PRINTF("INTERRUPTED! \n\r");
+      if (NRF_RADIO->STATE == RADIO_STATE_STATE_RxIdle ||
+	  NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
+	{
+	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
+	}
+      NRF_RADIO->INTENSET |= RADIO_INTENSET_ADDRESS_Msk;
+    }*/
 
-        if (NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
-  	{
-  	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
-  	}
-      }
+
+  if (NRF_RADIO->EVENTS_END == 1)
+    {
+      /* Clear the interrupt and event register */
+      NRF_RADIO->EVENTS_END = 0;
+      NRF_RADIO->INTENCLR = RADIO_INTENCLR_END_Clear
+	  << RADIO_INTENCLR_ADDRESS_Pos;
+
+
+
+      PRINTF("END - - interrupt!\t state: %u \n\r", NRF_RADIO->STATE);
+      if (NRF_RADIO->STATE == RADIO_STATE_STATE_RxIdle ||
+	  NRF_RADIO->STATE == RADIO_STATE_STATE_RxDisable ||
+	  NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
+
+	{
+	  PRINTF("END - - INTERRUPTED (RECEIVING)! \n\r");
+	}
+
+      process_poll(&nrf_radio_process);
+      NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
+    }
+
+
+
+
+
+/*
 
   if (NRF_RADIO->EVENTS_BCMATCH == 1)
     {
-      /* Clear the interrupt register */
+       Clear the interrupt register
       NRF_RADIO->INTENCLR = RADIO_INTENCLR_BCMATCH_Clear << RADIO_INTENCLR_BCMATCH_Pos;
 
-      /* Clear the event register */
+       Clear the event register
       NRF_RADIO->EVENTS_BCMATCH = 0;
 
-      /* Read out the capture registers of the Address event and the BCMatch event*/
+       Read out the capture registers of the Address event and the BCMatch event
       time = NRF_TIMER0->CC[BCC_REG];
       ref_time = NRF_TIMER0->CC[TIMESTAMP_REG];
 
-      /* Disable the Bit counter, it will be restarted by the shortcut
+       Disable the Bit counter, it will be restarted by the shortcut
        * between Address event and the BCStart task.
-       */
+
       NRF_RADIO->TASKS_BCSTOP;
 
-      /* Re-enable the interrupt */
+       Re-enable the interrupt
       NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
 
       PRINTF("BC MATCH! \t\t Measured timer ticks: %u -----\n\r", (time - ref_time));
     }
+*/
+
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(nrf_radio_process, ev, data)
@@ -368,7 +418,9 @@ PROCESS_THREAD(nrf_radio_process, ev, data)
 
     packetbuf_clear();
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    len = nrf_radio_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+    //len = nrf_radio_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+
+    nrf_radio_read(rxbuffer, 4);
 
     packetbuf_set_datalen(len);
 
