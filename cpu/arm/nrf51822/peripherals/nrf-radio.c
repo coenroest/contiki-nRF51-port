@@ -196,13 +196,11 @@ nrf_radio_transmit(unsigned short transmit_len)
     return 0;
   }
   GET_LOCK();
-
+  NRF_RADIO->EVENTS_END = 0U;
   NRF_RADIO->TASKS_TXEN = 1;	/* With shortcuts enabled, this is the only command needed */
 
-/*  NRF_RADIO->EVENTS_END = 0U;  		 Make sure the radio has finished transmitting
-  while(NRF_RADIO->EVENTS_END == 0U)
-  {
-  }*/
+/*  		 Make sure the radio has finished transmitting */
+  while(NRF_RADIO->EVENTS_END == 0U);
   RELEASE_LOCK();
   PRINTF("PACKET SEND\n\r");
   return 1;

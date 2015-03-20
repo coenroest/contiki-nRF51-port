@@ -1,11 +1,4 @@
-/* This is a very simple hello_world program.
- * It aims to demonstrate the co-existence of two processes:
- * One of them prints a hello world message and the other blinks the LEDs
- *
- * It is largely based on hello_world in $(CONTIKI)/examples/sensinode
- *
- * Author: George Oikonomou - <oikonomou@users.sourceforge.net>
- */
+
 
 #include "contiki.h"
 #include "dev/leds.h"
@@ -18,10 +11,9 @@
 
 /* Parameters for sending a ping packet with controls */
 
-#define DEVICE_ID 1
+#define DEVICE_ID 8
 
-/* The fixed delay used for scheduling with the RTimer */
-#define DELAY_FIXED 1000
+#define DELAY_TICKS 144
 
 #define COUNT 0
 #define SENDER 1
@@ -32,62 +24,54 @@
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[32];  ///< Packet to transmit
-//static uint8_t rxbuffer[32];  ///< Received packet
+static uint8_t txbuffer[4];  ///< Packet to transmit
+
 rtimer_clock_t rtimer_ref_time, after_blink;
-static int count = 100;
-int delay = 0;
+static int count = 0;
+
 /*---------------------------------------------------------------------------*/
-PROCESS(pong_process, "Pong process");
+PROCESS(ping_process, "Ping process");
 PROCESS(blink_process, "LED blink process");
-AUTOSTART_PROCESSES(&pong_process, &blink_process);
+AUTOSTART_PROCESSES(&ping_process, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
-  nrf_radio_send(txbuffer, 4);
+  printf("main-SEND\n\r");
 
-  printf ("P0NG\t TX: ----- Packet send: %u\t%u\t%u\t%02x\n\r", txbuffer[0], txbuffer[1],
-	  txbuffer[2], txbuffer[3]);
-  printf ("P0NG\t TX: ----- Address timestamp: %u\n\r", nrf_radio_read_address_timestamp());
-  count++;
+  txbuffer[COUNT] = count++;//rxbuffer[COUNT];
+  txbuffer[SENDER] = DEVICE_ID;
+  txbuffer[DELAY] = DELAY_TICKS;
+  txbuffer[OPTIONAL] = 0x42;
+  nrf_radio_send (txbuffer, 8);
+  printf ("P0NG\t TX: ----- Packet: %u %u %u %02x\t\t timestamp: %u\n\r", txbuffer[0],
+	      txbuffer[1], txbuffer[2], txbuffer[3], NRF_TIMER0->CC[TIMESTAMP_REG]);
+
 
 }
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(pong_process, ev, data)
+PROCESS_THREAD(ping_process, ev, data)
 {
   PROCESS_BEGIN();
+  int last_count = 0;
 
   while(1)
   {
-      etimer_set(&et_tx, CLOCK_SECOND);
-
+      etimer_set (&et_tx, CLOCK_SECOND);
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-      nrf_radio_read(rxbuffer, 4);
-      printf ("P0NG\t RX: ----- Content of rxbuffer: %d\t%d\t%d\t%02x\n\r", rxbuffer[0], rxbuffer[1],
-            		  rxbuffer[2], rxbuffer[3]);
+      /* Switch the radio on and wait for incoming packets */
+      //printf("------- RADIO ON ----- \n\r");
 
-      if (rxbuffer[SENDER] == 0)
-	{
-	  /* Read the desired delay value from receive buffer */
-	  delay = rxbuffer[DELAY];
+      nrf_radio_on();
 
-	  /* Make a pong packet */
-	  txbuffer[COUNT] = count;
-	  txbuffer[SENDER] = DEVICE_ID;
-	  txbuffer[OPTIONAL] = 0x24;
 
-	  if (DEVICE_ID == 1)
-	    {
-	      txbuffer[DELAY] = delay;
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+DELAY_FIXED+delay,1,send,NULL);
-	    }
-	  else
-	    {
-	      txbuffer[delay] = 0;
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+DELAY_FIXED,1,send,NULL);
-	    }
-	}
+      printf ("P0NG\t RX: ----- Last packet: %u %u %u %02x\t\t timestamp: %u\n\r",
+	      rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], NRF_TIMER0->CC[TIMESTAMP_REG]);
+
+
+      rtimer_set (&rt, RTIMER_NOW() + RTIMER_ARCH_SECOND / 4, 1, send, NULL);
+
+
   }
 
   PROCESS_END();
@@ -104,9 +88,9 @@ PROCESS_THREAD(blink_process, ev, data)
 
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-    /*leds_off(LEDS_ALL);
+    leds_off(LEDS_ALL);
     leds_on(blinks & LEDS_ALL);
-    blinks++;*/
+    blinks++;
   }
 
   PROCESS_END();

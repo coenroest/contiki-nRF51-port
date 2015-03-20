@@ -33,10 +33,11 @@ static void send(struct rtimer *rt, void *ptr) {
   txbuffer[1] = 42;
   txbuffer[2] = 8;
   txbuffer[3] = 66;
-  nrf_radio_send(txbuffer, 4);
+  nrf_radio_send(txbuffer, 8);
   printf ("TX: ----- Packet send: %u %u %u %02x\n\r", txbuffer[0],
   	      txbuffer[1], txbuffer[2], txbuffer[3]);
   count++;
+  //nrf_radio_on();
 
 }
 /*---------------------------------------------------------------------------*/
