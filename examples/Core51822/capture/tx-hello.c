@@ -18,7 +18,7 @@
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[32];  ///< Packet to transmit
+static uint8_t txbuffer[4];  ///< Packet to transmit
 rtimer_clock_t rtimer_ref_time, after_blink;
 static int count = 0;
 
@@ -29,13 +29,14 @@ AUTOSTART_PROCESSES(&tx_process, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
-  printf("----> AFTER SCHED: %u\n\r", RTIMER_NOW());
-
   txbuffer[0] = count;
+  txbuffer[1] = 42;
+  txbuffer[2] = 8;
+  txbuffer[3] = 66;
   nrf_radio_send(txbuffer, 4);
-  printf("Contents of packet: %d\t\t address timestamp: %u\n\r", (int)*txbuffer, NRF_TIMER0->CC[TIMESTAMP_REG]);
+  printf ("TX: ----- Packet send: %u %u %u %02x\n\r", txbuffer[0],
+  	      txbuffer[1], txbuffer[2], txbuffer[3]);
   count++;
-
 
 }
 /*---------------------------------------------------------------------------*/
@@ -56,7 +57,7 @@ PROCESS_THREAD(tx_process, ev, data)
 
       printf("--- The time is: %u\n\r", after_blink-rtimer_ref_time);*/
 
-      printf("----> BEFORE SCHED: %u\n\r", RTIMER_NOW());
+      //printf("----> BEFORE SCHED: %u\n\r", RTIMER_NOW());
       rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
   }
 

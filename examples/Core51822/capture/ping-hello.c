@@ -11,9 +11,9 @@
 
 /* Parameters for sending a ping packet with controls */
 
-#define DEVICE_ID 0
+#define DEVICE_ID 8
 
-#define DELAY_TICKS 0
+#define DELAY_TICKS 144
 
 #define COUNT 0
 #define SENDER 1
@@ -24,7 +24,7 @@
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[32];  ///< Packet to transmit
+static uint8_t txbuffer[4];  ///< Packet to transmit
 
 rtimer_clock_t rtimer_ref_time, after_blink;
 static int count = 0;
@@ -36,7 +36,17 @@ AUTOSTART_PROCESSES(&ping_process, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
-  printf("----> AFTER SCHED: %u\n\r", RTIMER_NOW());
+  printf("main-SEND\n\r");
+
+  txbuffer[COUNT] = count++;//rxbuffer[COUNT];
+  txbuffer[SENDER] = DEVICE_ID;
+  txbuffer[DELAY] = DELAY_TICKS;
+  txbuffer[OPTIONAL] = 0x42;
+  nrf_radio_send (txbuffer, 8);
+  printf ("PING\t TX: ----- Packet: %u %u %u %02x\t\t timestamp: %u\n\r", txbuffer[0],
+	      txbuffer[1], txbuffer[2], txbuffer[3], NRF_TIMER0->CC[TIMESTAMP_REG]);
+
+
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(ping_process, ev, data)
@@ -48,39 +58,17 @@ PROCESS_THREAD(ping_process, ev, data)
       etimer_set (&et_tx, 5*CLOCK_SECOND);
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-/*      txbuffer[COUNT] = count;
-      txbuffer[SENDER] = DEVICE_ID;
-      txbuffer[DELAY] = DELAY_TICKS;
-      txbuffer[OPTIONAL] = 0x42;
+      /* Switch the radio on and wait for incoming packets */
+      //printf("------- RADIO ON ----- \n\r");
 
-      printf("main-SEND\n\r");
-      NRF_RADIO->TASKS_DISABLE = 1U;  Make sure the radio has finished transmitting
-      while (NRF_RADIO->EVENTS_DISABLED == 0U)
-	{
-	}
-
-      nrf_radio_send (txbuffer, 4);
-      printf ("PING\t TX: ----- Packet send: %u\t%u\t%u\t%02x\n\r", txbuffer[0],
-	      txbuffer[1], txbuffer[2], txbuffer[3]);
-      printf ("PING\t TX: ----- Address timestamp: %u\n\r",
-	      NRF_TIMER0->CC[TIMESTAMP_REG]);
-      count++;*/
-
-
-      //nrf_radio_read(rxbuffer, 8);
       nrf_radio_on();
-      printf ("PING\t RX: ----- Packet received: %u\t%u\t%u\t%02x\n\r",
-	      rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3]);
-      printf ("PING\t RX: ----- Address timestamp: %u\n\r",
-	      NRF_TIMER0->CC[TIMESTAMP_REG]);
 
-      /*if (NRF_RADIO->STATE == RADIO_STATE_STATE_Disabled)
-	{
-	  printf ("main-RECV\n\r");
-	  //nrf_radio_on();
 
-	}
-*/
+      printf ("PING\t RX: ----- Last packet: %u %u %u %02x\t\t timestamp: %u\n\r",
+	      rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], NRF_TIMER0->CC[TIMESTAMP_REG]);
+
+      rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
+
 
   }
 
@@ -94,7 +82,7 @@ PROCESS_THREAD(blink_process, ev, data)
   blinks = 0;
 
   while(1) {
-    etimer_set(&et_blink, CLOCK_SECOND);
+    etimer_set(&et_blink, CLOCK_SECOND/2);
 
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 

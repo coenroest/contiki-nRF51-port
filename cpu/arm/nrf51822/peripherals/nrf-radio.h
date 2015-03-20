@@ -34,7 +34,8 @@ rtimer_clock_t nrf_radio_read_address_timestamp(void);
 
 void RADIO_IRQHandler(void);
 
-uint8_t rxbuffer[32];  ///< Received packet
+uint8_t rxbuffer[4];  ///< Received packet
+//uint32_t rxbuffer[4];  ///< Received packet
 
 extern const struct radio_driver nrf_radio_driver;
 

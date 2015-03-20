@@ -90,8 +90,8 @@ static void RELEASE_LOCK(void) {
 #define PACKET0_S0_SIZE                  (0UL)  //!< S0 size in bits
 #define PACKET0_PAYLOAD_SIZE             (0UL)  //!< payload size (length) in bits
 #define PACKET1_BASE_ADDRESS_LENGTH      (4UL)  //!< base address length in bytes
-#define PACKET1_STATIC_LENGTH            (1UL)  //!< static length in bytes
-#define PACKET1_PAYLOAD_SIZE             (1UL)  //!< payload size in bytes
+#define PACKET1_STATIC_LENGTH            (8UL)  //!< static length in bytes
+#define PACKET1_PAYLOAD_SIZE             (8UL)  //!< payload size in bytes
 /*---------------------------------------------------------------------------*/
 int
 nrf_radio_init(void)
@@ -108,7 +108,7 @@ nrf_radio_init(void)
     /* Radio config */
     NRF_RADIO->TXPOWER = (RADIO_TXPOWER_TXPOWER_Pos4dBm << RADIO_TXPOWER_TXPOWER_Pos);
     nrf_radio_set_channel(40UL);	// Frequency bin 40, 2440MHz
-    NRF_RADIO->MODE = (RADIO_MODE_MODE_Ble_1Mbit << RADIO_MODE_MODE_Pos);
+    NRF_RADIO->MODE = (RADIO_MODE_MODE_Nrf_1Mbit << RADIO_MODE_MODE_Pos);
 
     NRF_RADIO->BASE0 = 0x42424242;
 
@@ -181,6 +181,9 @@ nrf_radio_prepare(const void *payload, unsigned short payload_len)
   /* Switch the packet pointer to the payload */
   NRF_RADIO->PACKETPTR = (uint32_t)payload;
 
+  //uint32_t *payload32 = (uint32_t *) payload;
+  //memcpy(NRF_RADIO->PACKETPTR, payload32, payload_len);
+
   RELEASE_LOCK();
   return 1;
 
@@ -232,8 +235,12 @@ nrf_radio_read(void *buf, unsigned short buf_len)
       PRINTF("PACKET RECEIVED\n\r");
 
       /* Switch the packet pointer to the payload */
-      NRF_RADIO->PACKETPTR = (uint32_t)buf;
-      //memcpy(buf, NRF_RADIO->PACKETPTR, buf_len);
+      //NRF_RADIO->PACKETPTR = (uint32_t)buf;
+      //buf = (uint32_t)buf;
+      //memcpy((uint32_t)buf, NRF_RADIO->PACKETPTR, buf_len);
+
+      memcpy(buf, (const char *) (NRF_RADIO->PACKETPTR), buf_len);
+
       ret = sizeof(buf);			/* Fix me: find actual size of packet */
   }
 
@@ -257,6 +264,8 @@ nrf_radio_on(void)
     }
     GET_LOCK();
     int ret = 0;
+
+  NRF_RADIO->EVENTS_END = 0U;
   NRF_RADIO->TASKS_RXEN = 1U;
 
   RELEASE_LOCK();
@@ -354,22 +363,22 @@ RADIO_IRQHandler(void)
     {
       /* Clear the interrupt and event register */
       NRF_RADIO->EVENTS_END = 0;
-      NRF_RADIO->INTENCLR = RADIO_INTENCLR_END_Clear
-	  << RADIO_INTENCLR_ADDRESS_Pos;
+      /*NRF_RADIO->INTENCLR = RADIO_INTENCLR_END_Clear
+	  << RADIO_INTENCLR_ADDRESS_Pos;*/
 
-
-
-      PRINTF("END - - interrupt!\t state: %u \n\r", NRF_RADIO->STATE);
+      //PRINTF("END - - interrupt!\t state: %u \n\r", NRF_RADIO->STATE);
       if (NRF_RADIO->STATE == RADIO_STATE_STATE_RxIdle ||
 	  NRF_RADIO->STATE == RADIO_STATE_STATE_RxDisable ||
+	  NRF_RADIO->STATE == RADIO_STATE_STATE_Disabled ||
 	  NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
 
 	{
 	  PRINTF("END - - INTERRUPTED (RECEIVING)! \n\r");
+	  process_poll(&nrf_radio_process);
 	}
 
-      process_poll(&nrf_radio_process);
-      NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
+
+      //NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
     }
 
 
@@ -420,7 +429,7 @@ PROCESS_THREAD(nrf_radio_process, ev, data)
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
     //len = nrf_radio_read(packetbuf_dataptr(), PACKETBUF_SIZE);
 
-    nrf_radio_read(rxbuffer, 4);
+    nrf_radio_read(rxbuffer, 8);
 
     packetbuf_set_datalen(len);
 
