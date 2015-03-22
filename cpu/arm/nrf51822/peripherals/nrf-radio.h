@@ -23,6 +23,9 @@ int nrf_radio_send(const void *payload, unsigned short payload_len);
 
 int nrf_radio_read(void *buf, unsigned short buf_len);
 
+int nrf_radio_receiving_packet(void);
+int nrf_radio_pending_packet(void);
+
 int nrf_radio_on(void);
 int nrf_radio_off(void);
 
@@ -35,7 +38,6 @@ rtimer_clock_t nrf_radio_read_address_timestamp(void);
 void RADIO_IRQHandler(void);
 
 uint8_t rxbuffer[4];  ///< Received packet
-//uint32_t rxbuffer[4];  ///< Received packet
 
 extern const struct radio_driver nrf_radio_driver;
 

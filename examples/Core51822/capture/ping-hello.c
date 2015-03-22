@@ -74,10 +74,13 @@ PROCESS_THREAD(ping_process, ev, data)
       nrf_radio_on();
 
       /* do we have a packet pending? */
-      while(NRF_RADIO->EVENTS_END == 0);
+      nrf_radio_pending_packet();
+
       /* we got something. clear event. */
-      NRF_RADIO->EVENTS_END = 0;
+      //NRF_RADIO->EVENTS_END = 0;
+
       nrf_radio_read(rxbuffer, 8);
+      nrf_radio_off();
       printf ("PING\t RX: ----- Last packet: %u %u %u %02x\t\t timestamp: %u\n\r",
 	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[OPTIONAL], NRF_TIMER0->CC[TIMESTAMP_REG]);
 

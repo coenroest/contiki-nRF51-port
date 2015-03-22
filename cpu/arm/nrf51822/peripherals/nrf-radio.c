@@ -23,6 +23,20 @@
 #endif
 
 /*---------------------------------------------------------------------------*/
+
+#ifndef RADIO_SHORTS_ENABLED
+#define RADIO_SHORTS_ENABLED false
+#endif
+
+#ifndef RADIO_BCC_ENABLED
+#define RADIO_BCC_ENABLED false
+#endif
+
+#ifndef RADIO_INTERRUPT_ENABLED
+#define RADIO_INTERRUPT_ENABLED false
+#endif
+
+/*---------------------------------------------------------------------------*/
 PROCESS(nrf_radio_process, "nRF Radio driver");
 /*---------------------------------------------------------------------------*/
 
@@ -33,6 +47,9 @@ int nrf_radio_transmit(unsigned short transmit_len);
 int nrf_radio_send(const void *payload, unsigned short payload_len);
 
 int nrf_radio_read(void *buf, unsigned short buf_len);
+
+int nrf_radio_receiving_packet(void);
+int nrf_radio_pending_packet(void);
 
 int nrf_radio_on(void);
 int nrf_radio_off(void);
@@ -60,8 +77,8 @@ const struct radio_driver nrf_radio_driver =
     nrf_radio_fast_send,
     /* detected_energy, */
     //nrf_radio_cca,
-    //nrf_radio_receiving_packet,
-    //nrf_radio_pending_packet,
+    nrf_radio_receiving_packet,
+    nrf_radio_pending_packet,
     nrf_radio_read_address_timestamp,
     nrf_radio_on,
     nrf_radio_off,
@@ -149,18 +166,23 @@ nrf_radio_init(void)
 	NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
 			    (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos) |
 			    (RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos);
+
+	/* How many bits do we want to count? */
 	NRF_RADIO->BCC = 24;
-	NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
 
   #endif
 #endif
 
 #if RADIO_INTERRUPT_ENABLED
-    //NRF_RADIO->INTENSET |= RADIO_INTENSET_ADDRESS_Msk;
-    NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
-    NVIC_SetPriority (RADIO_IRQn, 10);
-    NVIC_ClearPendingIRQ (RADIO_IRQn);
-    NVIC_EnableIRQ (RADIO_IRQn);
+
+  /* Enable interrupts for specific events */
+  NRF_RADIO->INTENSET |= RADIO_INTENSET_ADDRESS_Msk;
+  NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
+  NRF_RADIO->INTENSET |= RADIO_INTENSET_BCMATCH_Msk;
+
+  NVIC_SetPriority (RADIO_IRQn, 10);
+  NVIC_ClearPendingIRQ (RADIO_IRQn);
+  NVIC_EnableIRQ (RADIO_IRQn);
 
 #endif
 
@@ -196,11 +218,35 @@ nrf_radio_transmit(unsigned short transmit_len)
     return 0;
   }
   GET_LOCK();
-  NRF_RADIO->EVENTS_END = 0U;
-  NRF_RADIO->TASKS_TXEN = 1;	/* With shortcuts enabled, this is the only command needed */
 
-/*  		 Make sure the radio has finished transmitting */
-  while(NRF_RADIO->EVENTS_END == 0U);
+
+#if ! RADIO_INTERRUPT_ENABLED			/* Transmitting without interrupts */
+
+  NRF_RADIO->EVENTS_END = 0U;			/* Clear the end event register */
+
+  if (RADIO_SHORTS_ENABLED)
+    {
+      NRF_RADIO->TASKS_TXEN = 1;		/* Enable the radio in TX mode and start sending */
+    }
+  else
+    {
+      NRF_RADIO->EVENTS_READY = 0;		/* Clear ready register */
+      NRF_RADIO->TASKS_TXEN = 1;		/* Enable the radio in TX mode */
+      while(NRF_RADIO->EVENTS_READY == 0U);	/* Wait for the radio to ramp up */
+      NRF_RADIO->TASKS_START = 1;		/* Start the transmission */
+    }
+
+  while(NRF_RADIO->EVENTS_END == 0U);		/* Wait for the transmission to finish */
+
+
+  if (! RADIO_SHORTS_ENABLED)
+    {
+      NRF_RADIO->EVENTS_DISABLED = 0U;		/* Clear the disable event register */
+      NRF_RADIO->TASKS_DISABLE = 1U;		/* Disable the radio */
+      while (NRF_RADIO->EVENTS_DISABLED == 0U);	/* Wait for disabling to finish */
+    }
+#endif
+
   RELEASE_LOCK();
   PRINTF("PACKET SEND\n\r");
   return 1;
@@ -255,37 +301,6 @@ nrf_radio_read(void *buf, unsigned short buf_len)
 }
 /*---------------------------------------------------------------------------*/
 int
-nrf_radio_on(void)
-{
-  if(locked) {
-      return 0;
-    }
-    GET_LOCK();
-    int ret = 0;
-
-  NRF_RADIO->EVENTS_END = 0U;
-  NRF_RADIO->TASKS_RXEN = 1U;
-
-  RELEASE_LOCK();
-  return 1;
-}
-/*---------------------------------------------------------------------------*/
-int
-nrf_radio_off(void)
-{
-  /* Clear event register */
-  NRF_RADIO->EVENTS_DISABLED = 0U;
-  /* Disable radio */
-  NRF_RADIO->TASKS_DISABLE = 1U;
-  while(NRF_RADIO->EVENTS_DISABLED == 0U)
-  {
-      /* Wait for the radio to turn off */
-  }
-
-  return 1;
-}
-/*---------------------------------------------------------------------------*/
-int
 nrf_radio_set_channel(int channel)
 {
   if (channel < 0 || channel > 100)
@@ -328,6 +343,46 @@ nrf_radio_fast_send(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
+int
+nrf_radio_receiving_packet(void)
+{
+  if (! RADIO_INTERRUPT_ENABLED)
+    {
+      /*
+       * Poll for ADDRESS event
+       *
+       * The register must be cleared beforehand in radio_on()
+       */
+      while (NRF_RADIO->EVENTS_ADDRESS == 0);
+      return 1;
+    }
+  else
+    {
+      /* Set a flag from the interrupt handler? */
+      return 0;
+    }
+  }
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_pending_packet(void)
+{
+  if (! RADIO_INTERRUPT_ENABLED)
+    {
+      /*
+       * Poll for END event
+       *
+       * The register must be cleared beforehand in radio_on()
+       */
+      while (NRF_RADIO->EVENTS_END == 0);
+      return 1;
+    }
+  else
+    {
+      /* Set a flag from the interrupt handler? */
+      return 0;
+    }
+}
+/*---------------------------------------------------------------------------*/
 rtimer_clock_t
 nrf_radio_read_address_timestamp(void)
 {
@@ -338,10 +393,64 @@ nrf_radio_read_address_timestamp(void)
   return last_packet_timestamp;
 }
 /*---------------------------------------------------------------------------*/
+int
+nrf_radio_on(void)
+{
+  if(locked) {
+      return 0;
+    }
+  GET_LOCK();
+
+  if (! RADIO_INTERRUPT_ENABLED)
+    {
+      /* Clear ADDRESS register
+       *
+       * Is this needed for receiving_packet() function? */
+      NRF_RADIO->EVENTS_ADDRESS = 0U;
+
+      /* Clear END register
+       *
+       * Is this needed for pending_packet() function? */
+      NRF_RADIO->EVENTS_END = 0U;
+    }
+
+  if (RADIO_SHORTS_ENABLED)
+    {
+      NRF_RADIO->TASKS_RXEN = 1U;		/* Enable the radio in RX mode, radio will do the rest */
+    }
+  else
+    {
+      NRF_RADIO->EVENTS_READY = 0U;		/* Clear ready register */
+      NRF_RADIO->TASKS_RXEN = 1U;		/* Enable the radio in RX mode */
+      while(NRF_RADIO->EVENTS_READY == 0U);	/* Wait for the radio to ramp up */
+      NRF_RADIO->TASKS_START = 1U;		/* Start the reception */
+    }
+
+  RELEASE_LOCK();
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_off(void)
+{
+  /* Clear event register */
+  NRF_RADIO->EVENTS_DISABLED = 0U;
+  /* Disable radio */
+  NRF_RADIO->TASKS_DISABLE = 1U;
+  while(NRF_RADIO->EVENTS_DISABLED == 0U)
+  {
+      /* Wait for the radio to turn off */
+  }
+
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
 void
 RADIO_IRQHandler(void)
 {
-/*  if (NRF_RADIO->EVENTS_ADDRESS == 1)
+/*
+
+  if (NRF_RADIO->EVENTS_ADDRESS == 1)
     {
       NRF_RADIO->EVENTS_ADDRESS = 0;
        Clear the interrupt register
@@ -354,15 +463,15 @@ RADIO_IRQHandler(void)
 	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
 	}
       NRF_RADIO->INTENSET |= RADIO_INTENSET_ADDRESS_Msk;
-    }*/
+    }
 
 
   if (NRF_RADIO->EVENTS_END == 1)
     {
-      /* Clear the interrupt and event register */
+       Clear the interrupt and event register
       NRF_RADIO->EVENTS_END = 0;
-      /*NRF_RADIO->INTENCLR = RADIO_INTENCLR_END_Clear
-	  << RADIO_INTENCLR_ADDRESS_Pos;*/
+      NRF_RADIO->INTENCLR = RADIO_INTENCLR_END_Clear
+	  << RADIO_INTENCLR_ADDRESS_Pos;
 
       //PRINTF("END - - interrupt!\t state: %u \n\r", NRF_RADIO->STATE);
       if (NRF_RADIO->STATE == RADIO_STATE_STATE_RxIdle ||
@@ -379,11 +488,6 @@ RADIO_IRQHandler(void)
       //NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
     }
 
-
-
-
-
-/*
 
   if (NRF_RADIO->EVENTS_BCMATCH == 1)
     {

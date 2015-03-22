@@ -45,7 +45,7 @@ ppi_init (void)
   NRF_PPI->CH[2].TEP = (uint32_t) &NRF_GPIOTE->TASKS_OUT[GPIOTE_CHANNEL_NUMBER];
 
 
-  /* Enable PPI channel 0 (BCcounter), channel 1 (GPIO pin) and channel 26 (timestamp address event) */
+  /* Enable PPI channel 0 (BCcounter), channel 1 (GPIO pin), channel 2 (GPIO pin) and channel 26 (timestamp address event) */
   NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
 		  (PPI_CHEN_CH1_Enabled << PPI_CHEN_CH1_Pos) |
 		  (PPI_CHEN_CH2_Enabled << PPI_CHEN_CH2_Pos) |
