@@ -1,6 +1,6 @@
 TARGET = Core51822
 
-CONTIKI_PROJECT = ping-hello.bin pong-hello.bin tx-hello.bin
+CONTIKI_PROJECT = ping-hello.bin tx-hello.bin
 
 all: $(CONTIKI_PROJECT) 
 

@@ -7,6 +7,7 @@
 #include "nrf-radio.h"
 
 #include <stdio.h> /* For printf() */
+#include <inttypes.h>
 /*---------------------------------------------------------------------------*/
 
 /* Parameters for sending a ping packet with controls */
@@ -25,6 +26,7 @@ static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
 static uint8_t txbuffer[4];  ///< Packet to transmit
+static uint8_t rxbuffer[4];  ///< Received packet
 
 rtimer_clock_t rtimer_ref_time, after_blink;
 static int count = 0;
@@ -40,7 +42,7 @@ static void send(struct rtimer *rt, void *ptr) {
 
   printf("main-SEND\n\r");
 
-  txbuffer[COUNT] = count++;//rxbuffer[COUNT];
+  txbuffer[COUNT] = 88;
   txbuffer[SENDER] = DEVICE_ID;
   txbuffer[DELAY] = DELAY_TICKS;
   txbuffer[OPTIONAL] = 0x24;
@@ -60,13 +62,10 @@ PROCESS_THREAD(ping_process, ev, data)
       etimer_set (&et_tx, 5*CLOCK_SECOND);
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-      /* Switch the radio on and wait for incoming packets */
-      //printf("------- RADIO ON ----- \n\r");
-
-      txbuffer[COUNT] = count++;//rxbuffer[COUNT];
-      txbuffer[SENDER] = DEVICE_ID;
-      txbuffer[DELAY] = DELAY_TICKS;
-      txbuffer[OPTIONAL] = 0x24;
+      txbuffer[COUNT] = count++;
+//      txbuffer[SENDER] = DEVICE_ID;
+//      txbuffer[DELAY] = DELAY_TICKS;
+//      txbuffer[OPTIONAL] = 0x24;
       nrf_radio_send (txbuffer, 8);
       printf ("PING\t TX: ----- Packet: %u %u %u %02x\t\t timestamp: %u\n\r", txbuffer[COUNT],
     	      txbuffer[SENDER], txbuffer[DELAY], txbuffer[OPTIONAL], NRF_TIMER0->CC[TIMESTAMP_REG]);
@@ -76,13 +75,15 @@ PROCESS_THREAD(ping_process, ev, data)
       /* do we have a packet pending? */
       nrf_radio_pending_packet();
 
-      /* we got something. clear event. */
-      //NRF_RADIO->EVENTS_END = 0;
-
       nrf_radio_read(rxbuffer, 8);
       nrf_radio_off();
       printf ("PING\t RX: ----- Last packet: %u %u %u %02x\t\t timestamp: %u\n\r",
 	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[OPTIONAL], NRF_TIMER0->CC[TIMESTAMP_REG]);
+
+      if (rxbuffer[COUNT]%2)
+	{
+	  //rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
+	}
 
       if (rxbuffer[SENDER] == 1)
 	{
