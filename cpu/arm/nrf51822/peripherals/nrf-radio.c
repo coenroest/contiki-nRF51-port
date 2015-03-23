@@ -107,8 +107,8 @@ static void RELEASE_LOCK(void) {
 #define PACKET0_S0_SIZE                  (0UL)  //!< S0 size in bits
 #define PACKET0_PAYLOAD_SIZE             (0UL)  //!< payload size (length) in bits
 #define PACKET1_BASE_ADDRESS_LENGTH      (4UL)  //!< base address length in bytes
-#define PACKET1_STATIC_LENGTH            (38UL)  //!< static length in bytes
-#define PACKET1_PAYLOAD_SIZE             (38UL)  //!< payload size in bytes
+#define PACKET1_STATIC_LENGTH            (8UL)  //!< static length in bytes
+#define PACKET1_PAYLOAD_SIZE             (8UL)  //!< payload size in bytes
 
 uint8_t nrf_buffer[PACKET1_PAYLOAD_SIZE];  ///< packetbuffer
 /*---------------------------------------------------------------------------*/
@@ -273,18 +273,12 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   GET_LOCK();
   int ret = 0;
 
-  //NRF_RADIO->TASKS_RXEN = 1U; /* With shortcuts enabled, this is the only command needed */
-
-/*  while(NRF_RADIO->EVENTS_END == 0U)
-  {
-  }*/
-
   if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCOk)
   {
       PRINTF("PACKET RECEIVED\n\r");
 
       /* Reset the contents of buf */
-      //memset(buf, 0, buf_len);
+      memset(buf, 0, buf_len);
 
       /* Copy contents of the nrf_buffer to buf */
       memcpy(buf, (const char *) (nrf_buffer), buf_len);
@@ -295,6 +289,8 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   else if(NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCError)
   {
       PRINTF("PACKET RECEIVE FAILED\n\r");
+      /* Set the buf to error */
+      memset(buf, 6, buf_len);
   }
 /*  NRF_RADIO->EVENTS_END = 0U;  Make sure the radio has finished receiving
   while (NRF_RADIO->EVENTS_END == 0U)
