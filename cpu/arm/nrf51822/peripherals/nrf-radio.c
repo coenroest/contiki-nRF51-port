@@ -55,6 +55,8 @@ int nrf_radio_on(void);
 int nrf_radio_off(void);
 
 int nrf_radio_set_channel(int channel);
+int nrf_radio_set_txpower(int power);
+
 
 int nrf_radio_fast_send(void);
 
@@ -74,6 +76,7 @@ const struct radio_driver nrf_radio_driver =
     nrf_radio_send,
     nrf_radio_read,
     nrf_radio_set_channel,
+    nrf_radio_set_txpower,
     nrf_radio_fast_send,
     /* detected_energy, */
     //nrf_radio_cca,
@@ -310,6 +313,19 @@ nrf_radio_set_channel(int channel)
   }
 
   NRF_RADIO->FREQUENCY = (uint8_t)channel;
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_set_txpower(int power)
+{
+  if ((power < -30 || power > 4) && power % 4 != 0)
+  {
+    PRINTF("Power NOT set!\n\r");
+    return 0;
+  }
+
+  NRF_RADIO->TXPOWER = power;
   return 1;
 }
 /*---------------------------------------------------------------------------*/

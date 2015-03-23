@@ -15,19 +15,21 @@
 #define DEVICE_ID 8
 
 #define DELAY_TICKS 250
-#define MULTIPLIER  11
+#define MULTIPLIER 12
+#define TXPOWER 0
 
 #define COUNT 0
 #define SENDER 1
 #define DELAY 2
-#define OPTIONAL 3
+#define MULT 3
+#define	POWER 4
 
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[4];  ///< Packet to transmit
-static uint8_t rxbuffer[4];  ///< Received packet
+static uint8_t txbuffer[5];  ///< Packet to transmit
+static uint8_t rxbuffer[5];  ///< Received packet
 
 rtimer_clock_t rtimer_ref_time, after_blink;
 static uint32_t count = 0;
@@ -41,17 +43,6 @@ PROCESS(blink_process, "LED blink process");
 AUTOSTART_PROCESSES(&ping_process, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
-
-  printf("main-SEND\n\r");
-
-  txbuffer[COUNT] = 88;
-  txbuffer[SENDER] = DEVICE_ID;
-  txbuffer[DELAY] = DELAY_TICKS;
-  txbuffer[OPTIONAL] = 0x24;
-  nrf_radio_send (txbuffer, 8);
-  printf ("PING\t TX: ----- Packet: %u %u %u %02x\t\t timestamp: %u\n\r", txbuffer[0],
-	      txbuffer[1], txbuffer[2], txbuffer[3], NRF_TIMER0->CC[TIMESTAMP_REG]);
-
 
 }
 /*---------------------------------------------------------------------------*/
@@ -67,22 +58,23 @@ PROCESS_THREAD(ping_process, ev, data)
       txbuffer[COUNT] = count++;
       txbuffer[SENDER] = DEVICE_ID;
       txbuffer[DELAY] = DELAY_TICKS;
-      txbuffer[OPTIONAL] = MULTIPLIER;
-      nrf_radio_send (txbuffer, 4);
-      printf ("PING\t TX: ----- Packet: %u %u %u %02x\t\t timestamp: %u\n\r", txbuffer[COUNT],
-    	      txbuffer[SENDER], txbuffer[DELAY], txbuffer[OPTIONAL], NRF_TIMER0->CC[TIMESTAMP_REG]);
+      txbuffer[MULT] = MULTIPLIER;
+      txbuffer[POWER] = TXPOWER;
+      nrf_radio_send (txbuffer, 5);
+      printf ("PING\t TX: ----- Packet: %u %u %u %u %u\t\t timestamp: %u\n\r", txbuffer[COUNT],
+    	      txbuffer[SENDER], txbuffer[DELAY], txbuffer[MULT], txbuffer[POWER], NRF_TIMER0->CC[TIMESTAMP_REG]);
 
       nrf_radio_on();
 
       /* do we have a packet pending? */
       nrf_radio_pending_packet();
 
-      nrf_radio_read(rxbuffer, 4);
+      nrf_radio_read(rxbuffer, 5);
       nrf_radio_off();
-      printf ("PING\t RX: ----- Last packet: %u %u %u %02x\t\t\n\r",
-	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[OPTIONAL]);
+      printf ("PING\t RX: ----- Last packet: %u %u %u %u %u\t\t\n\r",
+	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
 
-      //printf("RX:\t %u %u %u %u %u %u %u %u\n\r", rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4], rxbuffer[5], rxbuffer[6], rxbuffer[7]);
+      printf("RX:\t %u %u %u %u %u %u %u %u\n\r", rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4], rxbuffer[5], rxbuffer[6], rxbuffer[7]);
 
       if (rxbuffer[SENDER] == 1)
 	{

@@ -30,6 +30,8 @@ int nrf_radio_on(void);
 int nrf_radio_off(void);
 
 int nrf_radio_set_channel(int channel);
+int nrf_radio_set_txpower(int power);
+
 
 int nrf_radio_fast_send(void);
 

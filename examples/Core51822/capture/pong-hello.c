@@ -12,19 +12,20 @@
 
 /* Parameters for sending a ping packet with controls */
 
-#define DEVICE_ID 1
+#define DEVICE_ID 2
 
 #define COUNT 0
 #define SENDER 1
 #define DELAY 2
-#define OPTIONAL 3
+#define MULT 3
+#define	POWER 4
 
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[4];  ///< Packet to transmit
-static uint8_t rxbuffer[4];  ///< Received packet
+static uint8_t txbuffer[5];  ///< Packet to transmit
+static uint8_t rxbuffer[5];  ///< Received packet
 
 rtimer_clock_t rtimer_ref_time, after_blink;
 static int delay = 0;
@@ -41,11 +42,11 @@ static void send(struct rtimer *rt, void *ptr) {
   txbuffer[COUNT] = 88;
   txbuffer[SENDER] = DEVICE_ID;
   txbuffer[DELAY] = 0;
-  txbuffer[OPTIONAL] = 88;
-  nrf_radio_send (txbuffer, 4);
-  printf ("REPLY!\t TX: ----- Packet: %u %u %u %02x\t\t timestamp: %u\n\r", txbuffer[0],
-	      txbuffer[1], txbuffer[2], txbuffer[3], NRF_TIMER0->CC[TIMESTAMP_REG]);
-
+  txbuffer[MULT] = 88;
+  txbuffer[POWER] = 88;
+  nrf_radio_send (txbuffer, 5);
+  printf ("REPLY!\t TX: ----- Packet: %u %u %u %u %u\t\t timestamp: %u\n\r", txbuffer[COUNT],
+      	      txbuffer[SENDER], txbuffer[DELAY], txbuffer[MULT], txbuffer[POWER], NRF_TIMER0->CC[TIMESTAMP_REG]);
 
 }
 /*---------------------------------------------------------------------------*/
@@ -63,23 +64,25 @@ PROCESS_THREAD(ping_process, ev, data)
       nrf_radio_on();
       /* do we have a packet pending? */
       nrf_radio_pending_packet();
-      nrf_radio_read(rxbuffer, 4);
+      nrf_radio_read(rxbuffer, 5);
       nrf_radio_off();
 
 
-      printf ("PONG\t RX: ----- Last packet: %u %u %u %02x\t\t\n\r",
-	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[OPTIONAL]);
+      printf ("P0NG\t RX: ----- Last packet: %u %u %u %u %u\t\t\n\r",
+      	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
 
 
       if (rxbuffer[SENDER] == 8)
 	{
 	  if (DEVICE_ID == 1)
 	    {
-	      delay = rxbuffer[DELAY]*rxbuffer[OPTIONAL];
+	      delay = rxbuffer[DELAY]*rxbuffer[MULT];
+	      NRF_RADIO->TXPOWER = (RADIO_TXPOWER_TXPOWER_Pos4dBm << RADIO_TXPOWER_TXPOWER_Pos);
 	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+RTIMER_ARCH_SECOND+delay,1,send,NULL);
 	    }
 	  if (DEVICE_ID == 2)
 	    {
+	      NRF_RADIO->TXPOWER = (RADIO_TXPOWER_TXPOWER_Neg30dBm << RADIO_TXPOWER_TXPOWER_Pos);
 	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+RTIMER_ARCH_SECOND,1,send,NULL);
 	    }
 	}
