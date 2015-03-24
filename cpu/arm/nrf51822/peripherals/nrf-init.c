@@ -44,11 +44,20 @@ ppi_init (void)
   NRF_PPI->CH[2].EEP = (uint32_t) &NRF_RADIO->EVENTS_END;
   NRF_PPI->CH[2].TEP = (uint32_t) &NRF_GPIOTE->TASKS_OUT[GPIOTE_CHANNEL_NUMBER];
 
+  /* Configure PPI channel 3 to toggle GPIO_OUTPUT_PIN on every the RADIO DISABLED event */
+  NRF_PPI->CH[3].EEP = (uint32_t) &NRF_RADIO->EVENTS_DISABLED;
+  NRF_PPI->CH[3].TEP = (uint32_t) &NRF_GPIOTE->TASKS_OUT[GPIOTE_CHANNEL_NUMBER];
+
+  // Configure PPI channel 4 to toggle GPIO_OUTPUT_PIN on every the RADIO PAYLOAD event
+  NRF_PPI->CH[4].EEP = (uint32_t) &NRF_RADIO->EVENTS_PAYLOAD;
+  NRF_PPI->CH[4].TEP = (uint32_t) &NRF_GPIOTE->TASKS_OUT[GPIOTE_CHANNEL_NUMBER];
 
   /* Enable PPI channel 0 (BCcounter), channel 1 (GPIO pin), channel 2 (GPIO pin) and channel 26 (timestamp address event) */
   NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
 		  (PPI_CHEN_CH1_Enabled << PPI_CHEN_CH1_Pos) |
 		  (PPI_CHEN_CH2_Enabled << PPI_CHEN_CH2_Pos) |
+		  (PPI_CHEN_CH3_Enabled << PPI_CHEN_CH3_Pos) |
+		  (PPI_CHEN_CH4_Enabled << PPI_CHEN_CH4_Pos) |
 		  (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
 }
 

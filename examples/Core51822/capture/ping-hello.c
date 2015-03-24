@@ -7,7 +7,17 @@
 #include "nrf-radio.h"
 
 #include <stdio.h> /* For printf() */
+#include <string.h> /* For memcpy() */
 #include <inttypes.h>
+
+#include "capture-scenario.h"
+
+#define DEBUG 1
+#if DEBUG
+#define PRINTF(...) printf(__VA_ARGS__)
+#else
+#define PRINTF(...) do {} while (0)
+#endif
 /*---------------------------------------------------------------------------*/
 
 /* Parameters for sending a ping packet with controls */
@@ -15,85 +25,125 @@
 #define DEVICE_ID 8
 
 #define DELAY_TICKS 250
-#define MULTIPLIER 12
+#define MULTIPLIER 15
 #define TXPOWER 0
 
-#define COUNT 0
-#define SENDER 1
-#define DELAY 2
-#define MULT 3
-#define	POWER 4
 
+#define SCENARIO 0
+#define COUNT 1
+#define SENDER 2
+#define DELAY 3
+#define MULT 4
+#define	POWER 5
+#define OPTIONAL1 6
+#define OPTIONAL2 7
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[5];  ///< Packet to transmit
-static uint8_t rxbuffer[5];  ///< Received packet
+static uint8_t txbuffer[8];  ///< Packet to transmit
+static uint8_t rxbuffer[8];  ///< Received packet
 
 rtimer_clock_t rtimer_ref_time, after_blink;
 static uint32_t count = 0;
-static uint32_t recvA = 0;
-static uint32_t recvB = 0;
-static uint32_t recvX = 0;
+static uint32_t recvA, recvB, recvX, recvX2 = 0;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(ping_process, "Ping process");
 PROCESS(blink_process, "LED blink process");
 AUTOSTART_PROCESSES(&ping_process, &blink_process);
 /*---------------------------------------------------------------------------*/
+static void count_score(void)
+{
+  /* Check what the content of the received packet is and increase
+   * the scores of the nodes
+   */
+  if (rxbuffer[SENDER] == 1)
+  	{
+  	  recvA++;
+  	}
+        else if (rxbuffer[SENDER] == 2)
+  	{
+  	  recvB++;
+  	}
+        else if (rxbuffer[SENDER] == 6)
+  	{
+  	  recvX++;
+  	}
+        else
+  	{
+  	  recvX2++;
+  	}
+}
+
 static void send(struct rtimer *rt, void *ptr) {
 
+  txbuffer[SCENARIO] = 1;
+  txbuffer[COUNT] = count++;
+  txbuffer[SENDER] = DEVICE_ID;
+  txbuffer[DELAY] = DELAY_TICKS;
+  txbuffer[MULT] = MULTIPLIER;
+  txbuffer[POWER] = TXPOWER;
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(ping_process, ev, data)
 {
   PROCESS_BEGIN();
 
+  int i = 2;
+  uint8_t *iterator; //address
+
   while(1)
   {
-      etimer_set (&et_tx, 5*CLOCK_SECOND);
-      PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
+    etimer_set (&et_tx, 5*CLOCK_SECOND);
+    PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-      txbuffer[COUNT] = count++;
-      txbuffer[SENDER] = DEVICE_ID;
-      txbuffer[DELAY] = DELAY_TICKS;
-      txbuffer[MULT] = MULTIPLIER;
-      txbuffer[POWER] = TXPOWER;
-      nrf_radio_send (txbuffer, 5);
-      printf ("PING\t TX: ----- Packet: %u %u %u %u %u\t\t timestamp: %u\n\r", txbuffer[COUNT],
-    	      txbuffer[SENDER], txbuffer[DELAY], txbuffer[MULT], txbuffer[POWER], NRF_TIMER0->CC[TIMESTAMP_REG]);
+/*    if (count >= 10)
+      {
+	if (i < sizeof(scenario)/sizeof(scenario[0]))
+	  {
+	    i++;
+	    count = 0;
+	  }
+	else
+	  {
+	    i = 0;
+	    PRINTF("END OF TESTS\n\r");
+	  }
+      }*/
 
-      nrf_radio_on();
+    memcpy(&txbuffer, scenario[2], 8);
+    txbuffer[COUNT] = count++;
+    txbuffer[DELAY] = 64;
+    txbuffer[MULT] = 1;
 
-      /* do we have a packet pending? */
-      nrf_radio_pending_packet();
+    /* ---- TX ---- */
+    nrf_radio_send (txbuffer, 8);
+    PRINTF ("PING\t TX: ----- Packet: %u %u %u %u %u %u\t\t timestamp: %u\n\r",
+    txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
+    txbuffer[MULT], txbuffer[POWER], nrf_radio_read_address_timestamp());
 
-      nrf_radio_read(rxbuffer, 5);
-      nrf_radio_off();
-      printf ("PING\t RX: ----- Last packet: %u %u %u %u %u\t\t\n\r",
-	      rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
+    /* ---- RX ---- */
+    nrf_radio_on();
 
-      printf("RX:\t %u %u %u %u %u %u %u %u\n\r", rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4], rxbuffer[5], rxbuffer[6], rxbuffer[7]);
+    /* do we have a packet pending?
+    *
+    * TODO CR: create an escape here for the situation of no packet reception
+    * Maybe use nrf_radio_receiving_packet() for this?*/
+    nrf_radio_pending_packet();
+    //nrf_radio_off();
+    nrf_radio_read(rxbuffer, 8);
 
-      if (rxbuffer[SENDER] == 1)
-	{
-	  recvA++;
-	}
-      else if (rxbuffer[SENDER] == 2)
-	{
-	  recvB++;
-	}
-      else if (rxbuffer[SENDER] == 6)
-	{
-	  recvX++;
-	}
+    PRINTF ("PING\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi\t\t\n\r",
+    rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
+    rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
 
+    //PRINTF("RX:\t %hi %hi %hi %hi %hi %hi %hi %hi\n\r", rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4], rxbuffer[5], rxbuffer[6], rxbuffer[7]);
 
+    /* Check of whom we received a packet and count it */
+    count_score();
 
-      printf("Score --- A: %i - B: %u - X: %u\n\r", recvA, recvB, recvX);
-      //rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
-
+    PRINTF("Score --- A: %i - B: %u - X: %u - X2: %u\n\r", recvA, recvB, recvX, recvX2);
 
   }
 
@@ -107,7 +157,7 @@ PROCESS_THREAD(blink_process, ev, data)
   blinks = 0;
 
   while(1) {
-    etimer_set(&et_blink, CLOCK_SECOND/2);
+    etimer_set(&et_blink, CLOCK_SECOND);
 
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 

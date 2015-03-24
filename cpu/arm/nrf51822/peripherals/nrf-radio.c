@@ -62,8 +62,12 @@ int nrf_radio_fast_send(void);
 
 rtimer_clock_t nrf_radio_read_address_timestamp(void);
 
+int nrf_radio_rssi(void);
+
+/*
 static volatile uint32_t ref_time = 0;
 static volatile uint32_t time = 0;
+*/
 
 /* Address timestamp in RTIMER ticks */
 static volatile uint32_t last_packet_timestamp = 0;
@@ -128,11 +132,12 @@ nrf_radio_init(void)
     NRF_RADIO->POWER = 1;
 
     /* Radio config */
-    NRF_RADIO->TXPOWER = (RADIO_TXPOWER_TXPOWER_Pos4dBm << RADIO_TXPOWER_TXPOWER_Pos);
+    nrf_radio_set_txpower(RADIO_TXPOWER_TXPOWER_Pos4dBm);
     nrf_radio_set_channel(40UL);	// Frequency bin 40, 2440MHz
     NRF_RADIO->MODE = (RADIO_MODE_MODE_Ble_1Mbit << RADIO_MODE_MODE_Pos);
 
     NRF_RADIO->BASE0 = 0x42424242;
+    //NRF_RADIO->BASE0 = 0x8E89BED6;	// BLE Advertising address
 
     NRF_RADIO->TXADDRESS = 0x00UL;      // Set device address 0 to use when transmitting
     NRF_RADIO->RXADDRESSES = 0x01UL;    // Enable device address 0 to use which receiving
@@ -211,7 +216,9 @@ nrf_radio_prepare(const void *payload, unsigned short payload_len)
   /* Switch the packet pointer to the payload */
   //NRF_RADIO->PACKETPTR = (uint32_t)payload;
 
-  ///const uint32_t *payload32 = payload;
+  /* Reset the contents of nrf_buffer */
+  memset(nrf_buffer, 0, payload_len);
+
   memcpy(nrf_buffer, (uint32_t*)payload, payload_len);
 
   RELEASE_LOCK();
@@ -319,13 +326,13 @@ nrf_radio_set_channel(int channel)
 int
 nrf_radio_set_txpower(int power)
 {
-  if ((power < -30 || power > 4) && power % 4 != 0)
+  if (power < -30 || power > 4 || power % 4 != 0)
   {
     PRINTF("Power NOT set!\n\r");
     return 0;
   }
 
-  NRF_RADIO->TXPOWER = power;
+  NRF_RADIO->TXPOWER = power << RADIO_TXPOWER_TXPOWER_Pos;
   return 1;
 }
 /*---------------------------------------------------------------------------*/
@@ -459,6 +466,17 @@ nrf_radio_off(void)
   }
 
   return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_rssi(void)
+{
+  int rssi = 0;
+
+  //NRF_RADIO->TASKS_RSSISTART;
+
+
+  return rssi;
 }
 /*---------------------------------------------------------------------------*/
 void

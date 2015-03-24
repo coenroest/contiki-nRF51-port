@@ -37,6 +37,8 @@ int nrf_radio_fast_send(void);
 
 rtimer_clock_t nrf_radio_read_address_timestamp(void);
 
+int nrf_radio_rssi(void);
+
 void RADIO_IRQHandler(void);
 
 extern const struct radio_driver nrf_radio_driver;
