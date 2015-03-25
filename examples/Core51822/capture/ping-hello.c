@@ -39,6 +39,7 @@ static uint8_t txbuffer[8];  ///< Packet to transmit
 static uint8_t rxbuffer[8];  ///< Received packet
 
 static uint32_t count = 0;
+static int i = 0;
 static uint32_t recvA, recvB, recvX, recvX2 = 0;
 
 /*---------------------------------------------------------------------------*/
@@ -73,7 +74,7 @@ PROCESS_THREAD(ping_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  int i = 2;
+
   int escape = 0;
 
   while(1)
@@ -81,41 +82,48 @@ PROCESS_THREAD(ping_process, ev, data)
     etimer_set (&et_tx, 5*CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
-/*    if (count >= 10)
+    if (count >= 10)			/* Number of rounds per scenario */
       {
-	if (i < sizeof(scenario)/sizeof(scenario[0]))
+	if (i < 6)			/* Number of scenarios */
 	  {
 	    i++;
 	    count = 0;
+	    PRINTF("\n\r\n\r<<<<<<<<<<<<<<SCENARIO: %i>>>>>>>>>>>>>>>>>>\n\r\n\r", i);
+	    recvA = 0;
+	    recvB = 0;
+	    recvX = 0;
+	    recvX2 = 0;
+
+
 	  }
 	else
 	  {
 	    i = 0;
-	    PRINTF("END OF TESTS\n\r");
+	    PRINTF("\n\r\n\r<<<<<<<<<<<<<<END OF TESTS>>>>>>>>>>>>>>>>>>\n\r\n\r");
+
+	    /* Stop the PING process */
+	    return 0;
 	  }
-      }*/
+      }
 
     /* Copy the control packet for a specific scenario */
-    memcpy(&txbuffer, scenario[0], 8);
+    memcpy(&txbuffer, scenario[i], 8);
 
     txbuffer[COUNT] = count++;
 
     /* Adjust it for testing */
-    txbuffer[DELAY] = 128;
-    txbuffer[MULT] = 1;
+    //txbuffer[DELAY] = 125;
+    //txbuffer[MULT] = 10;
 
-    txbuffer[POWERA] = RADIO_TXPOWER_TXPOWER_Pos4dBm;
-    txbuffer[POWERB] = RADIO_TXPOWER_TXPOWER_Neg12dBm;
-
-
-
+    //txbuffer[POWERA] = RADIO_TXPOWER_TXPOWER_Pos4dBm;
+    //txbuffer[POWERB] = RADIO_TXPOWER_TXPOWER_Neg8dBm;
 
 
     /* ---- TX ---- */
     nrf_radio_send (txbuffer, 8);
-    PRINTF ("PING\t TX: ----- Packet: %u %u %u %u %u %u %u\t\t timestamp: %u\n\r",
+    PRINTF ("PING\t TX: ----- Packet: %u %u %u %u %u %u %u\n\r",
     txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
-    txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB], nrf_radio_read_address_timestamp());
+    txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB]);
 
     /* ---- RX ---- */
     nrf_radio_on();
@@ -140,15 +148,12 @@ PROCESS_THREAD(ping_process, ev, data)
     /* Read what is in the radio buffer */
     nrf_radio_read(rxbuffer, 8);
 
-    PRINTF ("PING\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi\t\t\n\r",
+    PRINTF ("PING\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi\t\tRSSI: %i\n\r",
     rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
-    rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB]);
-
-/*    PRINTF("RX:\t %hi %hi %hi %hi %hi %hi %hi %hi\n\r",
-    rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4],
-    rxbuffer[5], rxbuffer[6], rxbuffer[7]);*/
+    rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB], nrf_radio_rssi());
 
     /* Check of whom we received a packet and count it */
+    /* TODO CR: store the score per scenario */
     count_score();
 
     PRINTF("Score --- A: %i - B: %u - X: %u - X2: %u\n\r", recvA, recvB, recvX, recvX2);

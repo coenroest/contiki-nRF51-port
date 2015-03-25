@@ -2,6 +2,7 @@
 #define CAPTURE_SCENARIO_H_
 
 #include <stdint.h>
+#include "nrf51_bitfields.h"	/* Used for the specific power values */
 
 #define SCENARIO 0
 #define COUNT 1
@@ -18,19 +19,21 @@
  *
  */
 
-uint8_t scenario[6][8] =
+uint8_t scenario[7][8] =
 	{
-	    {0, 0, 8, 0, 0, 0, 0, 0},
+	    {0, 0, 8, 0, 0, RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg16dBm, 0},
 
-	    {1, 0, 8, 0, 0, 12, 0, 0},
+	    {1, 0, 8, 128, 1, RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg16dBm, 0},
 
-	    {2, 0, 8, 250, 10, 12, 0, 0},
+	    {2, 0, 8, 128, 1,  RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg20dBm, 0},
 
-	    {3, 0, 8, 0, 0, 12, 0, 0},
+	    {3, 0, 8, 120, 1, RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg20dBm, 0},
 
-	    {4, 0, 8, 0, 0, 12, 0, 0},
+	    {4, 0, 8, 64, 1, RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg16dBm, 0},
 
-	    {5, 0, 8, 0, 0, 12, 0, 0},
+	    {5, 0, 8, 64, 1, RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg20dBm, 0},
+
+	    {6, 0, 8, 64, 1, RADIO_TXPOWER_TXPOWER_Pos4dBm, RADIO_TXPOWER_TXPOWER_Neg30dBm, 0},
 	};
 
 

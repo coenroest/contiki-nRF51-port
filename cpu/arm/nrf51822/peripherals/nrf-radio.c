@@ -36,6 +36,10 @@
 #define RADIO_INTERRUPT_ENABLED false
 #endif
 
+#ifndef RADIO_RSSI_ENABLED
+#define RADIO_RSSI_ENABLED true
+#endif
+
 /*---------------------------------------------------------------------------*/
 PROCESS(nrf_radio_process, "nRF Radio driver");
 /*---------------------------------------------------------------------------*/
@@ -170,17 +174,21 @@ nrf_radio_init(void)
       NRF_RADIO->CRCPOLY = 0x107UL;       // CRC poly: x^8+x^2^x^1+1
     }
 
-    /* Config Shortcuts like in page 86 and 88 of nRF series ref man */
+  /* Config Shortcuts like in page 86 and 88 of nRF series ref man */
 #if RADIO_SHORTS_ENABLED
-    NRF_RADIO->SHORTS |= (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
-			 (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
+  NRF_RADIO->SHORTS |= 	(RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
+			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
+#endif
 
-    #if RADIO_BCC_ENABLED
-	NRF_RADIO->SHORTS |= RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos;
-	/* How many bits do we want to count? */
-	NRF_RADIO->BCC = 24;
+#if RADIO_BCC_ENABLED
+  NRF_RADIO->SHORTS |= RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos;
+  /* How many bits do we want to count? */
+  NRF_RADIO->BCC = 24;
+#endif
 
-  #endif
+#if RADIO_RSSI_ENABLED
+  NRF_RADIO->SHORTS |= RADIO_SHORTS_ADDRESS_RSSISTART_Msk;
+  NRF_RADIO->SHORTS |= RADIO_SHORTS_DISABLED_RSSISTOP_Msk;
 #endif
 
 #if RADIO_INTERRUPT_ENABLED
@@ -466,8 +474,7 @@ nrf_radio_rssi(void)
 {
   int rssi = 0;
 
-  //NRF_RADIO->TASKS_RSSISTART;
-
+  rssi = NRF_RADIO->RSSISAMPLE;
 
   return rssi;
 }
