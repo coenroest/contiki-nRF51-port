@@ -326,11 +326,8 @@ nrf_radio_set_channel(int channel)
 int
 nrf_radio_set_txpower(int power)
 {
-  if (power < -30 || power > 4 || power % 4 != 0)
-  {
-    PRINTF("Power NOT set!\n\r");
-    return 0;
-  }
+
+  /* TODO CR: make an input check here */
 
   NRF_RADIO->TXPOWER = power << RADIO_TXPOWER_TXPOWER_Pos;
   return 1;

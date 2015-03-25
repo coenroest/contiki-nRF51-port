@@ -24,11 +24,6 @@
 
 #define DEVICE_ID 8
 
-#define DELAY_TICKS 250
-#define MULTIPLIER 15
-#define TXPOWER 0
-
-
 #define SCENARIO 0
 #define COUNT 1
 #define SENDER 2
@@ -39,12 +34,10 @@
 #define OPTIONAL2 7
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
-static struct rtimer rt;
 static uint8_t blinks;
 static uint8_t txbuffer[8];  ///< Packet to transmit
 static uint8_t rxbuffer[8];  ///< Received packet
 
-rtimer_clock_t rtimer_ref_time, after_blink;
 static uint32_t count = 0;
 static uint32_t recvA, recvB, recvX, recvX2 = 0;
 
@@ -75,23 +68,13 @@ static void count_score(void)
   	  recvX2++;
   	}
 }
-
-static void send(struct rtimer *rt, void *ptr) {
-
-  txbuffer[SCENARIO] = 1;
-  txbuffer[COUNT] = count++;
-  txbuffer[SENDER] = DEVICE_ID;
-  txbuffer[DELAY] = DELAY_TICKS;
-  txbuffer[MULT] = MULTIPLIER;
-  txbuffer[POWER] = TXPOWER;
-}
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(ping_process, ev, data)
 {
   PROCESS_BEGIN();
 
   int i = 2;
-  uint8_t *iterator; //address
+
 
   while(1)
   {
@@ -112,9 +95,14 @@ PROCESS_THREAD(ping_process, ev, data)
 	  }
       }*/
 
-    memcpy(&txbuffer, scenario[2], 8);
+    /* Copy the control packet for a specific scenario */
+    memcpy(&txbuffer, scenario[1], 8);
+
     txbuffer[COUNT] = count++;
-    txbuffer[DELAY] = 64;
+
+    /* Adjust it for testing */
+    txbuffer[POWER] = RADIO_TXPOWER_TXPOWER_Neg30dBm;
+    txbuffer[DELAY] = 250;
     txbuffer[MULT] = 1;
 
     /* ---- TX ---- */
@@ -138,7 +126,9 @@ PROCESS_THREAD(ping_process, ev, data)
     rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
     rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
 
-    //PRINTF("RX:\t %hi %hi %hi %hi %hi %hi %hi %hi\n\r", rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4], rxbuffer[5], rxbuffer[6], rxbuffer[7]);
+/*    PRINTF("RX:\t %hi %hi %hi %hi %hi %hi %hi %hi\n\r",
+    rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4],
+    rxbuffer[5], rxbuffer[6], rxbuffer[7]);*/
 
     /* Check of whom we received a packet and count it */
     count_score();

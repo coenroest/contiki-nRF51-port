@@ -56,8 +56,8 @@ ppi_init (void)
   NRF_PPI->CHEN = (PPI_CHEN_CH0_Enabled << PPI_CHEN_CH0_Pos) |
 		  (PPI_CHEN_CH1_Enabled << PPI_CHEN_CH1_Pos) |
 		  (PPI_CHEN_CH2_Enabled << PPI_CHEN_CH2_Pos) |
-		  (PPI_CHEN_CH3_Enabled << PPI_CHEN_CH3_Pos) |
-		  (PPI_CHEN_CH4_Enabled << PPI_CHEN_CH4_Pos) |
+		  //(PPI_CHEN_CH3_Enabled << PPI_CHEN_CH3_Pos) |
+		  //(PPI_CHEN_CH4_Enabled << PPI_CHEN_CH4_Pos) |
 		  (PPI_CHEN_CH26_Enabled << PPI_CHEN_CH26_Pos);
 }
 
