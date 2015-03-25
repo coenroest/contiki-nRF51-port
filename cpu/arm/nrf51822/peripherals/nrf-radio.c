@@ -172,14 +172,11 @@ nrf_radio_init(void)
 
     /* Config Shortcuts like in page 86 and 88 of nRF series ref man */
 #if RADIO_SHORTS_ENABLED
-    NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
-    			(RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
+    NRF_RADIO->SHORTS |= (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
+			 (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos);
 
     #if RADIO_BCC_ENABLED
-	NRF_RADIO->SHORTS = (RADIO_SHORTS_READY_START_Enabled << RADIO_SHORTS_READY_START_Pos) |
-			    (RADIO_SHORTS_END_DISABLE_Enabled << RADIO_SHORTS_END_DISABLE_Pos) |
-			    (RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos);
-
+	NRF_RADIO->SHORTS |= RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos;
 	/* How many bits do we want to count? */
 	NRF_RADIO->BCC = 24;
 
@@ -252,7 +249,6 @@ nrf_radio_transmit(unsigned short transmit_len)
     }
 
   while(NRF_RADIO->EVENTS_END == 0U);		/* Wait for the transmission to finish */
-
 
   if (! RADIO_SHORTS_ENABLED)
     {

@@ -8,8 +8,8 @@
 #define SENDER 2
 #define DELAY 3
 #define MULT 4
-#define	POWER 5
-#define OPTIONAL1 6
+#define	POWERA 5
+#define POWERB 6
 #define OPTIONAL2 7
 
 /* FORMAT:

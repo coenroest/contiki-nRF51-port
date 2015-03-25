@@ -21,13 +21,15 @@
 
 #define DEVICE_ID 1
 
+#define FIXED_DELAY RTIMER_ARCH_SECOND / 10
+
 #define SCENARIO 0
 #define COUNT 1
 #define SENDER 2
 #define DELAY 3
 #define MULT 4
-#define	POWER 5
-#define OPTIONAL1 6
+#define	POWERA 5
+#define POWERB 6
 #define OPTIONAL2 7
 
 /*---------------------------------------------------------------------------*/
@@ -50,20 +52,20 @@ static void send(struct rtimer *rt, void *ptr) {
 
   nrf_radio_transmit(8);
 
-  PRINTF ("REPLY %u!\t TX: ----- Packet: %hi %hi %hi %hi %hi %hi\t\t timestamp: %u\n\r",
+  PRINTF ("REPLY %u!\t TX: ----- Packet: %hi %hi %hi %hi %hi %hi %hi\t\t timestamp: %u\n\r",
 	  DEVICE_ID, txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
-	  txbuffer[MULT], txbuffer[POWER], nrf_radio_read_address_timestamp());
+	  txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB], nrf_radio_read_address_timestamp());
   tx_sfd = nrf_radio_read_address_timestamp();
 
 
   /* Find out if the packet has a large processing time */
   if (DEVICE_ID == 1)
     {
-      PRINTF("<<<<<<< SFD delta: %u\n\r", (tx_sfd - rx_sfd) - (RTIMER_ARCH_SECOND/50+tx_delay));
+      PRINTF("<<<<<<< SFD delta: %u\n\r", (tx_sfd - rx_sfd) - (FIXED_DELAY+tx_delay));
     }
   else
     {
-      PRINTF("<<<<<<< SFD delta: %u\n\r", (tx_sfd - rx_sfd) - (RTIMER_ARCH_SECOND/50));
+      PRINTF("<<<<<<< SFD delta: %u\n\r", (tx_sfd - rx_sfd) - (FIXED_DELAY));
     }
 
 }
@@ -89,9 +91,9 @@ PROCESS_THREAD(ping_process, ev, data)
       nrf_radio_read(rxbuffer, 8);
       nrf_radio_off();
 
-      PRINTF ("P0NG %u\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi\t\t\n\r",
+      PRINTF ("P0NG %u\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi\t\t\n\r",
 	      DEVICE_ID, rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
-	      rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
+	      rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB]);
 
       rx_sfd = nrf_radio_read_address_timestamp();
 
@@ -104,18 +106,20 @@ PROCESS_THREAD(ping_process, ev, data)
 	      /* Introduce a given delay for the node with higher TX power */
 	      tx_delay = rxbuffer[DELAY]*rxbuffer[MULT];
 
+	      /* Change the TXpower of Node A to the by the initiator requested value */
+	      nrf_radio_set_txpower(rxbuffer[POWERA]);
+
 	      /* Schedule a new transmission with that delay */
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+(RTIMER_ARCH_SECOND/50)+tx_delay,1,send,NULL);
+	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+FIXED_DELAY+tx_delay,1,send,NULL);
 	    }
 	  if (DEVICE_ID == 2)		/* Node B */
 	    {
 
-	      /* Change the TXpower of Node B to the by the initiator requested value
-	       * Multiply by -1 to get negative power which could not be stored in the rxbuffer */
-	      nrf_radio_set_txpower(-1*rxbuffer[POWER]);
+	      /* Change the TXpower of Node B to the by the initiator requested value */
+	      nrf_radio_set_txpower(rxbuffer[POWERB]);
 
 	      /* Schedule a new transmission */
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+(RTIMER_ARCH_SECOND/50),1,send,NULL);
+	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+FIXED_DELAY,1,send,NULL);
 	    }
 
 	  /* Prepare the packet */
@@ -125,7 +129,8 @@ PROCESS_THREAD(ping_process, ev, data)
 	  txbuffer[SENDER] = 	DEVICE_ID;
 	  txbuffer[DELAY] = 	88;
 	  txbuffer[MULT] = 	88;
-	  txbuffer[POWER] = 	88;
+	  txbuffer[POWERA] = 	88;
+	  txbuffer[POWERB] = 	88;
 
 	  nrf_radio_prepare(txbuffer, 8);
 

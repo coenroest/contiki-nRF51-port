@@ -29,8 +29,8 @@
 #define SENDER 2
 #define DELAY 3
 #define MULT 4
-#define	POWER 5
-#define OPTIONAL1 6
+#define	POWERA 5
+#define POWERB 6
 #define OPTIONAL2 7
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
@@ -74,7 +74,7 @@ PROCESS_THREAD(ping_process, ev, data)
   PROCESS_BEGIN();
 
   int i = 2;
-
+  int escape = 0;
 
   while(1)
   {
@@ -96,20 +96,26 @@ PROCESS_THREAD(ping_process, ev, data)
       }*/
 
     /* Copy the control packet for a specific scenario */
-    memcpy(&txbuffer, scenario[1], 8);
+    memcpy(&txbuffer, scenario[0], 8);
 
     txbuffer[COUNT] = count++;
 
     /* Adjust it for testing */
-    txbuffer[POWER] = RADIO_TXPOWER_TXPOWER_Neg30dBm;
-    txbuffer[DELAY] = 250;
+    txbuffer[DELAY] = 128;
     txbuffer[MULT] = 1;
+
+    txbuffer[POWERA] = RADIO_TXPOWER_TXPOWER_Pos4dBm;
+    txbuffer[POWERB] = RADIO_TXPOWER_TXPOWER_Neg12dBm;
+
+
+
+
 
     /* ---- TX ---- */
     nrf_radio_send (txbuffer, 8);
-    PRINTF ("PING\t TX: ----- Packet: %u %u %u %u %u %u\t\t timestamp: %u\n\r",
+    PRINTF ("PING\t TX: ----- Packet: %u %u %u %u %u %u %u\t\t timestamp: %u\n\r",
     txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
-    txbuffer[MULT], txbuffer[POWER], nrf_radio_read_address_timestamp());
+    txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB], nrf_radio_read_address_timestamp());
 
     /* ---- RX ---- */
     nrf_radio_on();
@@ -118,13 +124,25 @@ PROCESS_THREAD(ping_process, ev, data)
     *
     * TODO CR: create an escape here for the situation of no packet reception
     * Maybe use nrf_radio_receiving_packet() for this?*/
-    nrf_radio_pending_packet();
-    //nrf_radio_off();
+    //nrf_radio_pending_packet();
+
+    /* FIXME CR: quick hack to prevent the program from waiting on an
+     * END event if the packets have collided.
+     */
+    while (NRF_RADIO->EVENTS_END == 0 && escape < 400000)
+      {
+	escape++;
+      }
+    escape = 0;
+
+    nrf_radio_off();
+
+    /* Read what is in the radio buffer */
     nrf_radio_read(rxbuffer, 8);
 
-    PRINTF ("PING\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi\t\t\n\r",
+    PRINTF ("PING\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi\t\t\n\r",
     rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
-    rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWER]);
+    rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB]);
 
 /*    PRINTF("RX:\t %hi %hi %hi %hi %hi %hi %hi %hi\n\r",
     rxbuffer[0], rxbuffer[1], rxbuffer[2], rxbuffer[3], rxbuffer[4],
