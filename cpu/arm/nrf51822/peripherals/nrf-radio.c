@@ -140,8 +140,18 @@ nrf_radio_init(void)
     nrf_radio_set_channel(40UL);	// Frequency bin 40, 2440MHz
     NRF_RADIO->MODE = (RADIO_MODE_MODE_Ble_1Mbit << RADIO_MODE_MODE_Pos);
 
-    NRF_RADIO->BASE0 = 0x42424242;
+    //NRF_RADIO->BASE0 = 0x42424242;
     //NRF_RADIO->BASE0 = 0x8E89BED6;	// BLE Advertising address
+    NRF_RADIO->BASE0 = 0x8E89BED5;
+
+    // Radio address config
+/*
+    NRF_RADIO->PREFIX0 = 0xC4C3C2E7UL;  // Prefix byte of addresses 3 to 0
+    NRF_RADIO->PREFIX1 = 0xC5C6C7C8UL;  // Prefix byte of addresses 7 to 4
+    NRF_RADIO->BASE0   = 0xE7E7E7E7UL;  // Base address for prefix 0
+    NRF_RADIO->BASE1   = 0x00C2C2C2UL;  // Base address for prefix 1-7
+*/
+
 
     NRF_RADIO->TXADDRESS = 0x00UL;      // Set device address 0 to use when transmitting
     NRF_RADIO->RXADDRESSES = 0x01UL;    // Enable device address 0 to use which receiving
@@ -355,7 +365,7 @@ nrf_radio_fast_send(void)
   {
     if(NRF_RADIO->STATE == RADIO_STATE_STATE_TxIdle)
     {
-    NRF_RADIO->TASKS_START;
+    NRF_RADIO->TASKS_START = 1;
     PRINTF("Packet fast send finished\n\r");
     RELEASE_LOCK();
     return 1;

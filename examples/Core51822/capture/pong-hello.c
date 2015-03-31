@@ -30,7 +30,7 @@
 #define MULT 4
 #define	POWERA 5
 #define POWERB 6
-#define OPTIONAL2 7
+#define OPTIONAL 7
 
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
@@ -46,15 +46,15 @@ static int tx_delay = 0;
 /*---------------------------------------------------------------------------*/
 PROCESS(ping_process, "Ping process");
 PROCESS(blink_process, "LED blink process");
-AUTOSTART_PROCESSES(&ping_process, &blink_process);
+AUTOSTART_PROCESSES(&ping_process);//, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
   nrf_radio_transmit(8);
 
-  PRINTF ("REPLY %u!\t TX: ----- Packet: %hi %hi %hi %hi %hi %hi %hi\t\t timestamp: %u\n\r",
+  PRINTF ("REPLY %u!\t TX: ----- Packet: %hi %hi %hi %hi %hi %hi %hi %hi\n\r",
 	  DEVICE_ID, txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
-	  txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB], nrf_radio_read_address_timestamp());
+	  txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB], txbuffer[OPTIONAL]);
   tx_sfd = nrf_radio_read_address_timestamp();
 
 
@@ -76,7 +76,7 @@ PROCESS_THREAD(ping_process, ev, data)
 
   while(1)
   {
-      etimer_set (&et_tx, 5*CLOCK_SECOND);
+      etimer_set (&et_tx, CLOCK_SECOND);
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
 
@@ -91,9 +91,9 @@ PROCESS_THREAD(ping_process, ev, data)
       nrf_radio_read(rxbuffer, 8);
       nrf_radio_off();
 
-      PRINTF ("P0NG %u\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi\t\t\n\r",
+      PRINTF ("P0NG %u\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi %hi\t\t\n\r",
 	      DEVICE_ID, rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
-	      rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB]);
+	      rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB], rxbuffer[OPTIONAL]);
 
       rx_sfd = nrf_radio_read_address_timestamp();
 
@@ -101,7 +101,7 @@ PROCESS_THREAD(ping_process, ev, data)
 
       if (rxbuffer[SENDER] == 8)	/* Is the packet from the initiator? */
 	{
-	  if (DEVICE_ID == 1)		/* Node A */
+	  if (DEVICE_ID == 1 && rxbuffer[OPTIONAL] != 2)		/* Node A */
 	    {
 	      /* Introduce a given delay for the node with higher TX power */
 	      tx_delay = rxbuffer[DELAY]*rxbuffer[MULT];
@@ -112,7 +112,7 @@ PROCESS_THREAD(ping_process, ev, data)
 	      /* Schedule a new transmission with that delay */
 	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+FIXED_DELAY+tx_delay,1,send,NULL);
 	    }
-	  if (DEVICE_ID == 2)		/* Node B */
+	  if (DEVICE_ID == 2 && rxbuffer[OPTIONAL] != 1)		/* Node B */
 	    {
 
 	      /* Change the TXpower of Node B to the by the initiator requested value */
@@ -127,10 +127,11 @@ PROCESS_THREAD(ping_process, ev, data)
 	  txbuffer[SCENARIO] = 	rxbuffer[SCENARIO];
 	  txbuffer[COUNT] = 	rxbuffer[COUNT];
 	  txbuffer[SENDER] = 	DEVICE_ID;
-	  txbuffer[DELAY] = 	88;
-	  txbuffer[MULT] = 	88;
-	  txbuffer[POWERA] = 	88;
-	  txbuffer[POWERB] = 	88;
+	  txbuffer[DELAY] = 	12;
+	  txbuffer[MULT] = 	34;
+	  txbuffer[POWERA] = 	56;
+	  txbuffer[POWERB] = 	78;
+	  txbuffer[OPTIONAL] = 	rxbuffer[OPTIONAL];
 
 	  nrf_radio_prepare(txbuffer, 8);
 

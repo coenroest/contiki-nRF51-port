@@ -12,54 +12,63 @@
 #include "dev/radio.h"
 #include "simple-uart.h"
 #include "nrf-radio.h"
+#include "nrf-delay.h"
 
 #include <stdio.h> /* For printf() */
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
-static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[4];  ///< Packet to transmit
-rtimer_clock_t rtimer_ref_time, after_blink;
-static int count = 0;
 
+uint32_t freq = 0;
 /*---------------------------------------------------------------------------*/
-PROCESS(tx_process, "TX process");
+PROCESS(rssi_process, "RSSI process");
 PROCESS(blink_process, "LED blink process");
-AUTOSTART_PROCESSES(&tx_process, &blink_process);
+AUTOSTART_PROCESSES(&rssi_process, &blink_process);
 /*---------------------------------------------------------------------------*/
-static void send(struct rtimer *rt, void *ptr) {
-
-  txbuffer[0] = count;
-  txbuffer[1] = 42;
-  txbuffer[2] = 8;
-  txbuffer[3] = 66;
-  nrf_radio_send(txbuffer, 8);
-  printf ("TX: ----- Packet send: %u %u %u %02x\n\r", txbuffer[0],
-  	      txbuffer[1], txbuffer[2], txbuffer[3]);
-  count++;
-  //nrf_radio_on();
-
-}
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(tx_process, ev, data)
+PROCESS_THREAD(rssi_process, ev, data)
 {
   PROCESS_BEGIN();
 
+
   while(1)
   {
-      etimer_set(&et_tx, 5*CLOCK_SECOND);
+      etimer_set(&et_tx, 0.5*CLOCK_SECOND);
 
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
+      NRF_RADIO->FREQUENCY = freq;
+      NRF_RADIO->EVENTS_READY = 0U;
+      NRF_RADIO->TASKS_RXEN = 1U;
+      while (NRF_RADIO->EVENTS_READY == 0U);
+      NRF_RADIO->EVENTS_END = 0U;
 
-     /* rtimer_ref_time = RTIMER_NOW();
-      leds_blink();
-      after_blink = RTIMER_NOW();
+      NRF_RADIO->TASKS_START = 1U;
 
-      printf("--- The time is: %u\n\r", after_blink-rtimer_ref_time);*/
+      NRF_RADIO->EVENTS_RSSIEND = 0U;
+      NRF_RADIO->TASKS_RSSISTART = 1U;
+/*      nrf_delay_us(40);
+      NRF_RADIO->TASKS_RSSISTOP = 1U;*/
+      while(NRF_RADIO->EVENTS_RSSIEND == 0U);
 
-      //printf("----> BEFORE SCHED: %u\n\r", RTIMER_NOW());
-      rtimer_set(&rt, RTIMER_NOW()+RTIMER_ARCH_SECOND,1,send,NULL);
+      //rssi[i] = NRF_RADIO->RSSISAMPLE;
+      printf ("RSSI channel %u: %u\n\r", freq, NRF_RADIO->RSSISAMPLE);
+
+      NRF_RADIO->EVENTS_DISABLED = 0U;
+      NRF_RADIO->TASKS_DISABLE = 1U;  // Disable the radio.
+
+      while (NRF_RADIO->EVENTS_DISABLED == 0U)
+	{
+	  // Do nothing.
+	}
+
+      if (freq < 100)
+	{
+	  freq++;
+	}
+      else
+	return 0;
+
+
   }
 
   PROCESS_END();
