@@ -152,7 +152,6 @@ nrf_radio_init(void)
     NRF_RADIO->BASE1   = 0x00C2C2C2UL;  // Base address for prefix 1-7
 */
 
-
     NRF_RADIO->TXADDRESS = 0x00UL;      // Set device address 0 to use when transmitting
     NRF_RADIO->RXADDRESSES = 0x01UL;    // Enable device address 0 to use which receiving
 

@@ -61,11 +61,11 @@ static void send(struct rtimer *rt, void *ptr) {
   /* Find out if the packet has a large processing time */
   if (DEVICE_ID == 1)
     {
-      PRINTF("<<<<<<< SFD delta: %u\n\r", (tx_sfd - rx_sfd) - (FIXED_DELAY+tx_delay));
+      PRINTF("<<<<<<< SFD delta: %lu\n\r", (tx_sfd - rx_sfd) - (FIXED_DELAY+tx_delay));
     }
   else
     {
-      PRINTF("<<<<<<< SFD delta: %u\n\r", (tx_sfd - rx_sfd) - (FIXED_DELAY));
+      PRINTF("<<<<<<< SFD delta: %lu\n\r", (tx_sfd - rx_sfd) - (FIXED_DELAY));
     }
 
 }

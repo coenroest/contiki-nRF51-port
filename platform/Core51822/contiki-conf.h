@@ -26,14 +26,14 @@
 #define RADIO_INTERRUPT_ENABLED 0
 */
 
-//#ifndef NETSTACK_CONF_RADIO
-//#define NETSTACK_CONF_RADIO   nrf_radio_driver
-//#endif /* NETSTACK_CONF_RADIO */
+#ifndef NETSTACK_CONF_RADIO
+#define NETSTACK_CONF_RADIO   nrf_radio_driver
+#endif /* NETSTACK_CONF_RADIO */
 /*---------------------------------------------------------------------------*/
 /** Specify the UART baud rate */
 #define UART_BAUDRATE UART_BAUDRATE_BAUDRATE_Baud38400
 
-/** Defines for the capture/compare registers */
+/** Defines for the capture/compare registers in TIMER0*/
 #define SCHEDULE_REG 	0
 #define TIMESTAMP_REG 	1
 #define NOW_REG		2
@@ -88,8 +88,8 @@ typedef uint32_t rtimer_clock_t;
  */
 #define HFCLK_FREQUENCY		  (16000000UL)
 
-/** \brief 62.5 kHz clock based on TIMER1 for the RTIMER
- *  62.5kHz = 16MHz/((1<<0)x256). To decrease this frequency \ref TIMER_PRESCALER
+/** \brief 16MHz clock based on TIMER0 for the RTIMER
+ *  16MHz = 16MHz/((1<<0)x1). To decrease this frequency \ref TIMER_PRESCALER
  *  can be increased till 9 */
 #define RTIMER_ARCH_SECOND 		(((HFCLK_FREQUENCY)/(1<<TIMER_PRESCALER))/TIMER_COMPARE_FREQ)
 /** @} */

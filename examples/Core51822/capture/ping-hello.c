@@ -86,11 +86,12 @@ PROCESS_THREAD(ping_process, ev, data)
   PROCESS_BEGIN();
 
   /* Start at a specific scenario */
-  i = 11;
+  i = 3;
 
   while(1)
   {
-    etimer_set (&et_tx, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
+    //etimer_set (&et_tx, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
+    etimer_set (&et_tx, CLOCK_SECOND * 1 + random_rand() % (CLOCK_SECOND * 1));
 
     PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
@@ -175,7 +176,7 @@ PROCESS_THREAD(ping_process, ev, data)
       {
 	count_score();
 	ratio = signal - noise;
-	PRINTF("Score --- A: %i - B: %u - X: %u - X2: %u\t SNR: %i\n\r", recvA, recvB, recvX, recvX2, ratio);
+	PRINTF("Score --- A: %u - B: %u - X: %u - X2: %u\t SNR: %i\n\r", recvA, recvB, recvX, recvX2, ratio);
 	PRINTF("---------------------------------------------------------\n\r\n\r");
       }
     else if (txbuffer[OPTIONAL] == 1)
