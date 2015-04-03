@@ -68,13 +68,9 @@ rtimer_clock_t nrf_radio_read_address_timestamp(void);
 
 int nrf_radio_rssi(void);
 
-/*
-static volatile uint32_t ref_time = 0;
-static volatile uint32_t time = 0;
-*/
-
-/* Address timestamp in RTIMER ticks */
-static volatile uint32_t last_packet_timestamp = 0;
+/* Local functions prototypes */
+static void on(void);
+static void off(void);
 
 const struct radio_driver nrf_radio_driver =
 {
@@ -83,28 +79,32 @@ const struct radio_driver nrf_radio_driver =
     nrf_radio_transmit,
     nrf_radio_send,
     nrf_radio_read,
-    nrf_radio_set_channel,
-    nrf_radio_set_txpower,
+    //nrf_radio_set_channel,
+    //nrf_radio_set_txpower,
     nrf_radio_fast_send,
     /* detected_energy, */
     //nrf_radio_cca,
     nrf_radio_receiving_packet,
     nrf_radio_pending_packet,
-    nrf_radio_read_address_timestamp,
+    //nrf_radio_read_address_timestamp,
     nrf_radio_on,
     nrf_radio_off,
 };
 
 /*---------------------------------------------------------------------------*/
 static uint8_t locked, lock_on, lock_off;
+static uint8_t receive_on;
+
 #define GET_LOCK() locked++
 static void RELEASE_LOCK(void) {
   if(locked == 1) {
     if(lock_on) {
+      //TODO CR why is this needed or not? Test it!
       //on();
       lock_on = 0;
     }
     if(lock_off) {
+      //TODO CR why is this needed or not? Test it!
       //off();
       lock_off = 0;
     }
@@ -121,7 +121,7 @@ static void RELEASE_LOCK(void) {
 #define PACKET1_STATIC_LENGTH            (8UL)  //!< static length in bytes
 #define PACKET1_PAYLOAD_SIZE             (8UL)  //!< payload size in bytes
 
-uint8_t nrf_buffer[PACKET1_PAYLOAD_SIZE];  ///< packetbuffer
+uint8_t nrf_buffer[PACKET1_PAYLOAD_SIZE];  ///< buffer for packets
 /*---------------------------------------------------------------------------*/
 int
 nrf_radio_init(void)
@@ -420,52 +420,87 @@ rtimer_clock_t
 nrf_radio_read_address_timestamp(void)
 {
   /* Read the last address timestamp from the TIMER0 capture register */
-
-  last_packet_timestamp = NRF_TIMER0->CC[TIMESTAMP_REG];
-
-  return last_packet_timestamp;
+  return NRF_TIMER0->CC[TIMESTAMP_REG];
 }
 /*---------------------------------------------------------------------------*/
 int
 nrf_radio_on(void)
 {
-  if(locked) {
-      return 0;
+  if(receive_on) {
+      return 1;
     }
-  GET_LOCK();
-
-  if (! RADIO_INTERRUPT_ENABLED)
-    {
-      /* Clear ADDRESS register
-       *
-       * Is this needed for receiving_packet() function? */
-      NRF_RADIO->EVENTS_ADDRESS = 0U;
-
-      /* Clear END register
-       *
-       * Is this needed for pending_packet() function? */
-      NRF_RADIO->EVENTS_END = 0U;
+    if(locked) {
+      lock_on = 1;
+      return 1;
     }
 
-  if (RADIO_SHORTS_ENABLED)
-    {
-      NRF_RADIO->TASKS_RXEN = 1U;		/* Enable the radio in RX mode, radio will do the rest */
-    }
-  else
-    {
-      NRF_RADIO->EVENTS_READY = 0U;		/* Clear ready register */
-      NRF_RADIO->TASKS_RXEN = 1U;		/* Enable the radio in RX mode */
-      while(NRF_RADIO->EVENTS_READY == 0U);	/* Wait for the radio to ramp up */
-      NRF_RADIO->TASKS_START = 1U;		/* Start the reception */
-    }
+    GET_LOCK();
+    on();
+    RELEASE_LOCK();
+    return 1;
 
-  RELEASE_LOCK();
-  return 1;
 }
 /*---------------------------------------------------------------------------*/
 int
 nrf_radio_off(void)
 {
+  /* Don't do anything if we are already turned off. */
+  if(receive_on == 0) {
+    return 1;
+  }
+
+  /* If we are called when the driver is locked, we indicate that the
+     radio should be turned off when the lock is unlocked. */
+  if(locked) {
+    /*    printf("Off when locked (%d)\n", locked);*/
+    lock_off = 1;
+    return 1;
+  }
+
+  GET_LOCK();
+  off();
+  RELEASE_LOCK();
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+void
+on(void)
+{
+
+  if (! RADIO_INTERRUPT_ENABLED)
+      {
+        /* Clear ADDRESS register
+         *
+         * Is this needed for receiving_packet() function? */
+        NRF_RADIO->EVENTS_ADDRESS = 0U;
+
+        /* Clear END register
+         *
+         * Is this needed for pending_packet() function? */
+        NRF_RADIO->EVENTS_END = 0U;
+      }
+
+    if (RADIO_SHORTS_ENABLED)
+      {
+        NRF_RADIO->TASKS_RXEN = 1U;		/* Enable the radio in RX mode, radio will do the rest */
+      }
+    else
+      {
+        NRF_RADIO->EVENTS_READY = 0U;		/* Clear ready register */
+        NRF_RADIO->TASKS_RXEN = 1U;		/* Enable the radio in RX mode */
+        while(NRF_RADIO->EVENTS_READY == 0U);	/* Wait for the radio to ramp up */
+        NRF_RADIO->TASKS_START = 1U;		/* Start the reception */
+      }
+
+    receive_on = 1;
+}
+/*---------------------------------------------------------------------------*/
+void
+off(void)
+{
+  /*  PRINTF("off\n");*/
+  receive_on = 0;
+
   /* Clear event register */
   NRF_RADIO->EVENTS_DISABLED = 0U;
   /* Disable radio */
@@ -474,8 +509,6 @@ nrf_radio_off(void)
   {
       /* Wait for the radio to turn off */
   }
-
-  return 1;
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -576,7 +609,7 @@ PROCESS_THREAD(nrf_radio_process, ev, data)
 
     //nrf_radio_read(rxbuffer, 8);
 
-    packetbuf_set_datalen(len);
+    //packetbuf_set_datalen(len);
 
     NETSTACK_RDC.input();
   }
