@@ -39,8 +39,8 @@
 /*---------------------------------------------------------------------------*/
 static struct etimer et_blink, et_tx;
 static uint8_t blinks;
-static uint8_t txbuffer[8];  ///< Packet to transmit
-static uint8_t rxbuffer[8];  ///< Received packet
+static uint8_t txbuffer[28];  ///< Packet to transmit
+static uint8_t rxbuffer[28];  ///< Received packet
 
 static uint32_t count = 0;
 static uint32_t recvA, recvB, recvX, recvX2 = 0;
@@ -86,22 +86,22 @@ PROCESS_THREAD(ping_process, ev, data)
   while(1)
     {
       //etimer_set (&et_tx, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
-      etimer_set (&et_tx, CLOCK_SECOND * 1 + random_rand() % (CLOCK_SECOND * 1));
+      etimer_set (&et_tx, CLOCK_SECOND * 5);// + random_rand() % (CLOCK_SECOND * 1));
 
       PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_TIMER);
 
+    txbuffer[SCENARIO] 	= 	55;
+    txbuffer[COUNT] 	= 	count++;
+    txbuffer[SENDER] 	=	DEVICE_ID;
+    txbuffer[23]	=	88;
+    txbuffer[24]	=	77;
 
-    txbuffer[COUNT] = count++;
-    txbuffer[SCENARIO] = 0;
-    txbuffer[SENDER] = DEVICE_ID;
-    txbuffer[DELAY] = 0;
-    txbuffer[MULT] = 0;
-    txbuffer[POWERA] = 0;
-    txbuffer[POWERB] = 0;
-    txbuffer[OPTIONAL] = 0;
 
     /* ---- TX ---- */
-    nrf_radio_send (txbuffer, 8);
+
+    // Change this to not hardcode the packet length
+    nrf_radio_send (txbuffer, 25);
+
     PRINTF ("PING\t TX: ----- Packet: %hi %hi %hi %hi %hi %hi %hi %hi\n\r",
     txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
     txbuffer[MULT], txbuffer[POWERA], txbuffer[POWERB], txbuffer[OPTIONAL]);
@@ -123,10 +123,11 @@ PROCESS_THREAD(ping_process, ev, data)
     escape = 0;
 
     /* Switch the radio off */
-    nrf_radio_off();
+    //nrf_radio_off();
+    NETSTACK_RADIO.off();
 
     /* Read what is in the radio buffer */
-    nrf_radio_read(rxbuffer, 8);
+    nrf_radio_read(rxbuffer, sizeof(rxbuffer));
 
     PRINTF ("PING\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi %hi\t\tRSSI: %i\n\r",
     rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER], rxbuffer[DELAY],

@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include <inttypes.h>
+#include <math.h>
 
 #include "contiki.h"
 #include "nrf-radio.h"
@@ -39,6 +40,12 @@
 #ifndef RADIO_RSSI_ENABLED
 #define RADIO_RSSI_ENABLED true
 #endif
+
+/** Defines for the capture/compare registers in TIMER0*/
+#define SCHEDULE_REG 	0
+#define TIMESTAMP_REG 	1
+#define NOW_REG		2
+#define BCC_REG		3
 
 /*---------------------------------------------------------------------------*/
 PROCESS(nrf_radio_process, "nRF Radio driver");
@@ -79,14 +86,11 @@ const struct radio_driver nrf_radio_driver =
     nrf_radio_transmit,
     nrf_radio_send,
     nrf_radio_read,
-    //nrf_radio_set_channel,
-    //nrf_radio_set_txpower,
     nrf_radio_fast_send,
     /* detected_energy, */
     //nrf_radio_cca,
     nrf_radio_receiving_packet,
     nrf_radio_pending_packet,
-    //nrf_radio_read_address_timestamp,
     nrf_radio_on,
     nrf_radio_off,
 };
@@ -94,6 +98,7 @@ const struct radio_driver nrf_radio_driver =
 /*---------------------------------------------------------------------------*/
 static uint8_t locked, lock_on, lock_off;
 static uint8_t receive_on;
+rtimer_clock_t time, ref_time = 0;
 
 #define GET_LOCK() locked++
 static void RELEASE_LOCK(void) {
@@ -116,10 +121,12 @@ static void RELEASE_LOCK(void) {
 /*---------------------------------------------------------------------------*/
 #define PACKET0_S1_SIZE                  (0UL)  //!< S1 size in bits
 #define PACKET0_S0_SIZE                  (0UL)  //!< S0 size in bits
-#define PACKET0_PAYLOAD_SIZE             (0UL)  //!< payload size (length) in bits
+#define PACKET0_PAYLOAD_SIZE             (8UL) 	//!< payload size (length) in bits
 #define PACKET1_BASE_ADDRESS_LENGTH      (4UL)  //!< base address length in bytes
-#define PACKET1_STATIC_LENGTH            (8UL)  //!< static length in bytes
-#define PACKET1_PAYLOAD_SIZE             (8UL)  //!< payload size in bytes
+#define PACKET1_STATIC_LENGTH            (1UL) 	//!< static length in bytes (adds 1 byte for lenght field)
+#define PACKET1_PAYLOAD_SIZE             (128UL)  //!< maximum payload size in bytes
+
+#define HEADER_LEN (uint8_t)ceil(PACKET0_PAYLOAD_SIZE / 8)
 
 uint8_t nrf_buffer[PACKET1_PAYLOAD_SIZE];  ///< buffer for packets
 /*---------------------------------------------------------------------------*/
@@ -227,13 +234,22 @@ nrf_radio_prepare(const void *payload, unsigned short payload_len)
 
   GET_LOCK();
 
-  /* Switch the packet pointer to the payload */
-  //NRF_RADIO->PACKETPTR = (uint32_t)payload;
 
-  /* Reset the contents of nrf_buffer */
-  memset(nrf_buffer, 0, payload_len);
+  // Frame to be send (payload_len + 1 byte for lenght)
+  uint8_t frame_length = payload_len + HEADER_LEN;
+  uint8_t frame[frame_length];
 
-  memcpy(nrf_buffer, (uint32_t*)payload, payload_len);
+  // Set the contents of the frame to 0 for verification
+  memset(frame, 0, frame_length);
+
+  // Set the lenght field of the packet
+  frame[0] = payload_len;
+
+  // Copy the payload to the frame
+  memcpy(frame + HEADER_LEN, payload, payload_len);
+
+  // Copy the frame to the send buffer
+  memcpy(nrf_buffer, (uint32_t*)frame, frame_length);
 
   RELEASE_LOCK();
   return 1;
@@ -277,6 +293,9 @@ nrf_radio_transmit(unsigned short transmit_len)
 
   RELEASE_LOCK();
   PRINTF("PACKET SEND\n\r");
+
+#warning "parameter transmit_len not used"
+
   return 1;
 }
 /*---------------------------------------------------------------------------*/
@@ -290,6 +309,8 @@ nrf_radio_send(const void *payload, unsigned short payload_len)
 int
 nrf_radio_read(void *buf, unsigned short buf_len)
 {
+  int length = 0;
+
   if(locked) {
     return 0;
   }
@@ -300,25 +321,34 @@ nrf_radio_read(void *buf, unsigned short buf_len)
   {
       PRINTF("PACKET RECEIVED\n\r");
 
-      /* Reset the contents of buf */
-      memset(buf, 0, buf_len);
+      /* Reset the contents of buf for verification */
+      memset (buf, 0, buf_len);
 
-      /* Copy contents of the nrf_buffer to buf */
-      memcpy(buf, (const char *) (nrf_buffer), buf_len);
+      /* Read the lenght of the packet */
+      length = nrf_buffer[0];
+      PRINTF ("Length: %i\n\r", length);
 
-      ret = sizeof(buf);			/* Fix me: find actual size of packet */
+      if (length > buf_len)
+	{
+	  PRINTF ("ERROR: packet is too large!\n\r");
+	}
+      else
+	{
+	  /* Copy contents of the nrf_buffer (without length field) to buf */
+	  memcpy (buf, (const char *) (nrf_buffer + HEADER_LEN), length);
+	}
+
+      // Return length of the packet
+      ret = length;
   }
 
   else if(NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCError)
   {
-      PRINTF("PACKET RECEIVE FAILED\n\r");
+      PRINTF ("PACKET RECEIVE FAILED\n\r");
       /* Set the buf to error */
-      memset(buf, 6, buf_len);
+      memset (buf, 6, buf_len);
   }
-/*  NRF_RADIO->EVENTS_END = 0U;  Make sure the radio has finished receiving
-  while (NRF_RADIO->EVENTS_END == 0U)
-    {
-    }*/
+
   RELEASE_LOCK();
   return ret;
 }
@@ -563,32 +593,31 @@ RADIO_IRQHandler(void)
 
       //NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
     }
-
+*/
 
   if (NRF_RADIO->EVENTS_BCMATCH == 1)
     {
-       Clear the interrupt register
+      //Clear the interrupt register
       NRF_RADIO->INTENCLR = RADIO_INTENCLR_BCMATCH_Clear << RADIO_INTENCLR_BCMATCH_Pos;
 
-       Clear the event register
+      //Clear the event register
       NRF_RADIO->EVENTS_BCMATCH = 0;
 
-       Read out the capture registers of the Address event and the BCMatch event
+      //Read out the capture registers of the Address event and the BCMatch event
       time = NRF_TIMER0->CC[BCC_REG];
       ref_time = NRF_TIMER0->CC[TIMESTAMP_REG];
 
+      /*
        Disable the Bit counter, it will be restarted by the shortcut
-       * between Address event and the BCStart task.
+       * between Address event and the BCStart task. */
 
-      NRF_RADIO->TASKS_BCSTOP;
+      NRF_RADIO->TASKS_BCSTOP = 1;
 
-       Re-enable the interrupt
-      NRF_RADIO->INTENSET = RADIO_INTENSET_BCMATCH_Msk;
+      //Re-enable the interrupt
+      NRF_RADIO->INTENSET |= RADIO_INTENSET_BCMATCH_Msk;
 
-      PRINTF("BC MATCH! \t\t Measured timer ticks: %u -----\n\r", (time - ref_time));
+      PRINTF("BC MATCH! \t\t Measured timer ticks: %u -----\n\r", (uint)(time - ref_time));
     }
-*/
-
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(nrf_radio_process, ev, data)
@@ -605,7 +634,7 @@ PROCESS_THREAD(nrf_radio_process, ev, data)
 
     packetbuf_clear();
     //packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
-    //len = nrf_radio_read(packetbuf_dataptr(), PACKETBUF_SIZE);
+    len = nrf_radio_read(nrf_buffer, PACKETBUF_SIZE);
 
     //nrf_radio_read(rxbuffer, 8);
 

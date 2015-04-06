@@ -19,7 +19,7 @@
 
 /* Parameters for sending a ping packet with controls */
 
-#define DEVICE_ID 1
+#define DEVICE_ID 2
 
 #define FIXED_DELAY RTIMER_ARCH_SECOND / 10
 
@@ -36,8 +36,8 @@
 static struct etimer et_blink, et_tx;
 static struct rtimer rt;
 static uint8_t blinks;
-static uint8_t txbuffer[8];  ///< Packet to transmit
-static uint8_t rxbuffer[8];  ///< Received packet
+static uint8_t txbuffer[28];  ///< Packet to transmit
+static uint8_t rxbuffer[28];  ///< Received packet
 
 rtimer_clock_t rtimer_ref_time, after_blink;
 rtimer_clock_t tx_sfd, rx_sfd, delta = 0;
@@ -50,7 +50,7 @@ AUTOSTART_PROCESSES(&ping_process);//, &blink_process);
 /*---------------------------------------------------------------------------*/
 static void send(struct rtimer *rt, void *ptr) {
 
-  nrf_radio_transmit(8);
+  nrf_radio_transmit(0);
 
   PRINTF ("REPLY %u!\t TX: ----- Packet: %hi %hi %hi %hi %hi %hi %hi %hi\n\r",
 	  DEVICE_ID, txbuffer[SCENARIO], txbuffer[COUNT], txbuffer[SENDER], txbuffer[DELAY],
@@ -88,12 +88,14 @@ PROCESS_THREAD(ping_process, ev, data)
        * TODO CR: create an escape here for the situation of no packet reception
        * Maybe use nrf_radio_receiving_packet() for this?*/
       nrf_radio_pending_packet();
-      nrf_radio_read(rxbuffer, 8);
+      nrf_radio_read(rxbuffer, sizeof(rxbuffer));
       nrf_radio_off();
 
       PRINTF ("P0NG %u\t RX: ----- Last packet: %hi %hi %hi %hi %hi %hi %hi %hi\t\t\n\r",
 	      DEVICE_ID, rxbuffer[SCENARIO], rxbuffer[COUNT], rxbuffer[SENDER],
 	      rxbuffer[DELAY], rxbuffer[MULT], rxbuffer[POWERA], rxbuffer[POWERB], rxbuffer[OPTIONAL]);
+
+      PRINTF ("---- SPECIAL: %hi\t%hi\n\r", rxbuffer[23], rxbuffer[24]);
 
       rx_sfd = nrf_radio_read_address_timestamp();
 
@@ -101,38 +103,40 @@ PROCESS_THREAD(ping_process, ev, data)
 
       if (rxbuffer[SENDER] == 8)	/* Is the packet from the initiator? */
 	{
-	  if (DEVICE_ID == 1 && rxbuffer[OPTIONAL] != 2)		/* Node A */
+	  if (DEVICE_ID == 1)		/* Node A */
 	    {
 	      /* Introduce a given delay for the node with higher TX power */
 	      tx_delay = rxbuffer[DELAY]*rxbuffer[MULT];
 
 	      /* Change the TXpower of Node A to the by the initiator requested value */
-	      nrf_radio_set_txpower(rxbuffer[POWERA]);
+	      //nrf_radio_set_txpower(rxbuffer[POWERA]);
 
 	      /* Schedule a new transmission with that delay */
 	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+FIXED_DELAY+tx_delay,1,send,NULL);
 	    }
-	  if (DEVICE_ID == 2 && rxbuffer[OPTIONAL] != 1)		/* Node B */
+	  if (DEVICE_ID == 2)		/* Node B */
 	    {
 
 	      /* Change the TXpower of Node B to the by the initiator requested value */
-	      nrf_radio_set_txpower(rxbuffer[POWERB]);
+	      //nrf_radio_set_txpower(rxbuffer[POWERB]);
 
 	      /* Schedule a new transmission */
-	      rtimer_set(&rt, nrf_radio_read_address_timestamp()+FIXED_DELAY,1,send,NULL);
+	      int sfd_delay = 640;
+	      rtimer_set(&rt, nrf_radio_read_address_timestamp() + FIXED_DELAY - sfd_delay,1,send,NULL);
 	    }
 
 	  /* Prepare the packet */
 
-	  txbuffer[SCENARIO] = 	rxbuffer[SCENARIO];
+	  txbuffer[SCENARIO] = 	0;
 	  txbuffer[COUNT] = 	rxbuffer[COUNT];
 	  txbuffer[SENDER] = 	DEVICE_ID;
 	  txbuffer[DELAY] = 	12;
 	  txbuffer[MULT] = 	34;
 	  txbuffer[POWERA] = 	56;
 	  txbuffer[POWERB] = 	78;
-	  txbuffer[OPTIONAL] = 	rxbuffer[OPTIONAL];
+	  txbuffer[OPTIONAL] = 	90;
 
+	  // Change this to not hardcode the packet length
 	  nrf_radio_prepare(txbuffer, 8);
 
 	}
