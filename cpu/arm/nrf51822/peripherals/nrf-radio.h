@@ -23,6 +23,8 @@ int nrf_radio_send(const void *payload, unsigned short payload_len);
 
 int nrf_radio_read(void *buf, unsigned short buf_len);
 
+int nrf_radio_fast_send(void);
+
 int nrf_radio_receiving_packet(void);
 int nrf_radio_pending_packet(void);
 
@@ -31,13 +33,8 @@ int nrf_radio_off(void);
 
 int nrf_radio_set_channel(int channel);
 int nrf_radio_set_txpower(int power);
-
-
-int nrf_radio_fast_send(void);
-
-rtimer_clock_t nrf_radio_read_address_timestamp(void);
-
 int nrf_radio_rssi(void);
+rtimer_clock_t nrf_radio_read_address_timestamp(void);
 
 void RADIO_IRQHandler(void);
 

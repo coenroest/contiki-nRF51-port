@@ -30,7 +30,7 @@
 #endif
 
 #ifndef RADIO_BCC_ENABLED
-#define RADIO_BCC_ENABLED false
+#define RADIO_BCC_ENABLED true
 #endif
 
 #ifndef RADIO_INTERRUPT_ENABLED
@@ -51,29 +51,9 @@
 PROCESS(nrf_radio_process, "nRF Radio driver");
 /*---------------------------------------------------------------------------*/
 
-int nrf_radio_init(void);
+/*
 
-int nrf_radio_prepare(const void *payload, unsigned short payload_len);
-int nrf_radio_transmit(unsigned short transmit_len);
-int nrf_radio_send(const void *payload, unsigned short payload_len);
-
-int nrf_radio_read(void *buf, unsigned short buf_len);
-
-int nrf_radio_receiving_packet(void);
-int nrf_radio_pending_packet(void);
-
-int nrf_radio_on(void);
-int nrf_radio_off(void);
-
-int nrf_radio_set_channel(int channel);
-int nrf_radio_set_txpower(int power);
-
-
-int nrf_radio_fast_send(void);
-
-rtimer_clock_t nrf_radio_read_address_timestamp(void);
-
-int nrf_radio_rssi(void);
+*/
 
 /* Local functions prototypes */
 static void on(void);
@@ -117,13 +97,12 @@ static void RELEASE_LOCK(void) {
   locked--;
 }
 
-
 /*---------------------------------------------------------------------------*/
 #define PACKET0_S1_SIZE                  (0UL)  //!< S1 size in bits
 #define PACKET0_S0_SIZE                  (0UL)  //!< S0 size in bits
 #define PACKET0_PAYLOAD_SIZE             (8UL) 	//!< payload size (length) in bits
 #define PACKET1_BASE_ADDRESS_LENGTH      (4UL)  //!< base address length in bytes
-#define PACKET1_STATIC_LENGTH            (1UL) 	//!< static length in bytes (adds 1 byte for lenght field)
+#define PACKET1_STATIC_LENGTH            (1UL) 	//!< static length in bytes (adds 1 byte for length field)
 #define PACKET1_PAYLOAD_SIZE             (128UL)  //!< maximum payload size in bytes
 
 #define HEADER_LEN (uint8_t)ceil(PACKET0_PAYLOAD_SIZE / 8)
@@ -174,8 +153,8 @@ nrf_radio_init(void)
 			(PACKET1_STATIC_LENGTH << RADIO_PCNF1_STATLEN_Pos)           |
 			(PACKET1_PAYLOAD_SIZE << RADIO_PCNF1_MAXLEN_Pos); //lint !e845 "The right argument to operator '|' is certain to be 0"
 
-     /* Configure buffer */
-     NRF_RADIO->PACKETPTR = (uint32_t)nrf_buffer;
+    /* Configure buffer */
+    NRF_RADIO->PACKETPTR = (uint32_t)nrf_buffer;
 
     /* CRC Config */
     NRF_RADIO->CRCCNF = (RADIO_CRCCNF_LEN_Two << RADIO_CRCCNF_LEN_Pos); // Number of checksum bits
@@ -199,7 +178,16 @@ nrf_radio_init(void)
 #if RADIO_BCC_ENABLED
   NRF_RADIO->SHORTS |= RADIO_SHORTS_ADDRESS_BCSTART_Enabled << RADIO_SHORTS_ADDRESS_BCSTART_Pos;
   /* How many bits do we want to count? */
-  NRF_RADIO->BCC = 24;
+  NRF_RADIO->BCC = 192;
+
+  /* TODO CR:	should this be here or in RADIO_INTERRUPT_ENABLED? */
+
+  NRF_RADIO->INTENSET |= RADIO_INTENSET_BCMATCH_Msk;
+
+  NVIC_SetPriority (RADIO_IRQn, 10);
+  NVIC_ClearPendingIRQ (RADIO_IRQn);
+  NVIC_EnableIRQ (RADIO_IRQn);
+
 #endif
 
 #if RADIO_RSSI_ENABLED
@@ -230,19 +218,16 @@ nrf_radio_init(void)
 int
 nrf_radio_prepare(const void *payload, unsigned short payload_len)
 {
-  /* Copy the payload to the location assigned to packet pointer */
-
   GET_LOCK();
 
-
-  // Frame to be send (payload_len + 1 byte for lenght)
+  // Frame to be send (payload_len + HEADER_LEN bytes (for length field))
   uint8_t frame_length = payload_len + HEADER_LEN;
   uint8_t frame[frame_length];
 
   // Set the contents of the frame to 0 for verification
   memset(frame, 0, frame_length);
 
-  // Set the lenght field of the packet
+  // Set the length field of the packet
   frame[0] = payload_len;
 
   // Copy the payload to the frame
@@ -315,65 +300,40 @@ nrf_radio_read(void *buf, unsigned short buf_len)
     return 0;
   }
   GET_LOCK();
-  int ret = 0;
 
   if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCOk)
-  {
+    {
       PRINTF("PACKET RECEIVED\n\r");
 
       /* Reset the contents of buf for verification */
       memset (buf, 0, buf_len);
 
-      /* Read the lenght of the packet */
+      /* Read the length of the packet */
       length = nrf_buffer[0];
-      PRINTF ("Length: %i\n\r", length);
+
+      //PRINTF ("Length: %i\n\r", length);
 
       if (length > buf_len)
 	{
-	  PRINTF ("ERROR: packet is too large!\n\r");
+	  PRINTF("ERROR: packet is too large!\n\r");
 	}
       else
 	{
 	  /* Copy contents of the nrf_buffer (without length field) to buf */
-	  memcpy (buf, (const char *) (nrf_buffer + HEADER_LEN), length);
+	  memcpy (buf, (const char *) (nrf_buffer + HEADER_LEN ), length);
 	}
+    }
 
-      // Return length of the packet
-      ret = length;
-  }
-
-  else if(NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCError)
-  {
-      PRINTF ("PACKET RECEIVE FAILED\n\r");
+  else if (NRF_RADIO->CRCSTATUS == RADIO_CRCSTATUS_CRCSTATUS_CRCError)
+    {
+      PRINTF("PACKET RECEIVE FAILED\n\r");
       /* Set the buf to error */
       memset (buf, 6, buf_len);
-  }
+    }
 
-  RELEASE_LOCK();
-  return ret;
-}
-/*---------------------------------------------------------------------------*/
-int
-nrf_radio_set_channel(int channel)
-{
-  if (channel < 0 || channel > 100)
-  {
-    PRINTF("Channel NOT set!\n\r");
-    return 0;
-  }
-
-  NRF_RADIO->FREQUENCY = (uint8_t)channel;
-  return 1;
-}
-/*---------------------------------------------------------------------------*/
-int
-nrf_radio_set_txpower(int power)
-{
-
-  /* TODO CR: make an input check here */
-
-  NRF_RADIO->TXPOWER = power << RADIO_TXPOWER_TXPOWER_Pos;
-  return 1;
+  RELEASE_LOCK ();
+  // Return length of the packet
+  return length;
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -444,13 +404,6 @@ nrf_radio_pending_packet(void)
       /* Set a flag from the interrupt handler? */
       return 0;
     }
-}
-/*---------------------------------------------------------------------------*/
-rtimer_clock_t
-nrf_radio_read_address_timestamp(void)
-{
-  /* Read the last address timestamp from the TIMER0 capture register */
-  return NRF_TIMER0->CC[TIMESTAMP_REG];
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -542,6 +495,29 @@ off(void)
 }
 /*---------------------------------------------------------------------------*/
 int
+nrf_radio_set_channel(int channel)
+{
+  if (channel < 0 || channel > 100)
+  {
+    PRINTF("Channel NOT set!\n\r");
+    return 0;
+  }
+
+  NRF_RADIO->FREQUENCY = (uint8_t)channel;
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_set_txpower(int power)
+{
+
+  /* TODO CR: make an input check here */
+
+  NRF_RADIO->TXPOWER = power << RADIO_TXPOWER_TXPOWER_Pos;
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
 nrf_radio_rssi(void)
 {
   int rssi = 0;
@@ -551,49 +527,16 @@ nrf_radio_rssi(void)
   return rssi;
 }
 /*---------------------------------------------------------------------------*/
+rtimer_clock_t
+nrf_radio_read_address_timestamp(void)
+{
+  /* Read the last address timestamp from the TIMER0 capture register */
+  return NRF_TIMER0->CC[TIMESTAMP_REG];
+}
+/*---------------------------------------------------------------------------*/
 void
 RADIO_IRQHandler(void)
 {
-/*
-
-  if (NRF_RADIO->EVENTS_ADDRESS == 1)
-    {
-      NRF_RADIO->EVENTS_ADDRESS = 0;
-       Clear the interrupt register
-      NRF_RADIO->INTENCLR = RADIO_INTENCLR_ADDRESS_Clear
-	  << RADIO_INTENCLR_ADDRESS_Pos;
-      PRINTF("INTERRUPTED! \n\r");
-      if (NRF_RADIO->STATE == RADIO_STATE_STATE_RxIdle ||
-	  NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
-	{
-	  PRINTF("INTERRUPTED (RECEIVING)! \n\r");
-	}
-      NRF_RADIO->INTENSET |= RADIO_INTENSET_ADDRESS_Msk;
-    }
-
-
-  if (NRF_RADIO->EVENTS_END == 1)
-    {
-       Clear the interrupt and event register
-      NRF_RADIO->EVENTS_END = 0;
-      NRF_RADIO->INTENCLR = RADIO_INTENCLR_END_Clear
-	  << RADIO_INTENCLR_ADDRESS_Pos;
-
-      //PRINTF("END - - interrupt!\t state: %u \n\r", NRF_RADIO->STATE);
-      if (NRF_RADIO->STATE == RADIO_STATE_STATE_RxIdle ||
-	  NRF_RADIO->STATE == RADIO_STATE_STATE_RxDisable ||
-	  NRF_RADIO->STATE == RADIO_STATE_STATE_Disabled ||
-	  NRF_RADIO->STATE == RADIO_STATE_STATE_Rx)
-
-	{
-	  PRINTF("END - - INTERRUPTED (RECEIVING)! \n\r");
-	  process_poll(&nrf_radio_process);
-	}
-
-
-      //NRF_RADIO->INTENSET |= RADIO_INTENSET_END_Msk;
-    }
-*/
 
   if (NRF_RADIO->EVENTS_BCMATCH == 1)
     {
