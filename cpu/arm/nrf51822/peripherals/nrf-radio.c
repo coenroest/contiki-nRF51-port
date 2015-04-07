@@ -77,8 +77,6 @@ const struct radio_driver nrf_radio_driver =
 
 /*---------------------------------------------------------------------------*/
 static uint8_t locked, lock_on, lock_off;
-static uint8_t receive_on;
-rtimer_clock_t time, ref_time = 0;
 
 #define GET_LOCK() locked++
 static void RELEASE_LOCK(void) {
@@ -96,6 +94,12 @@ static void RELEASE_LOCK(void) {
   }
   locked--;
 }
+
+static uint8_t receive_on;
+static int channel;
+rtimer_clock_t time, ref_time = 0;
+
+
 
 /*---------------------------------------------------------------------------*/
 #define PACKET0_S1_SIZE                  (0UL)  //!< S1 size in bits
@@ -494,17 +498,32 @@ off(void)
   }
 }
 /*---------------------------------------------------------------------------*/
-int
-nrf_radio_set_channel(int channel)
+void
+nrf_radio_flushrx(void)
 {
-  if (channel < 0 || channel > 100)
+  // Flush the nrf_buffer
+  memset(nrf_buffer, 0, PACKET1_PAYLOAD_SIZE);
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_set_channel(int c)
+{
+  if (c < 0 || c > 100)
   {
     PRINTF("Channel NOT set!\n\r");
     return 0;
   }
 
+  channel = c;
+
   NRF_RADIO->FREQUENCY = (uint8_t)channel;
   return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_get_channel(void)
+{
+  return channel;
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -515,6 +534,12 @@ nrf_radio_set_txpower(int power)
 
   NRF_RADIO->TXPOWER = power << RADIO_TXPOWER_TXPOWER_Pos;
   return 1;
+}
+/*---------------------------------------------------------------------------*/
+int
+nrf_radio_get_txpower(void)
+{
+  return NRF_RADIO->TXPOWER;
 }
 /*---------------------------------------------------------------------------*/
 int
